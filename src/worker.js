@@ -1,6 +1,8 @@
 // disk.88x31.app: what a tap on a floppy disk's tag opens. Smallest version: check the tap and show which disk and the tap count.
 // It keeps nothing: no database, no cookie, no log. The key is the NTAG 424 factory key until the tags get their own.
+// disks.js says which chip is which disk, so a link edited to another disk's number is refused.
 import { checkTap } from "./sun.js";
+import { DISKS } from "./disks.js";
 
 const page = (title, body, status = 200) =>
   new Response(
@@ -21,6 +23,8 @@ export default {
     const c = ((url.searchParams.get("c") || "").match(/^[0-9a-f]{16}/i) || [""])[0];
     const tap = await checkTap(e, c).catch(() => ({ ok: false }));
     if (!tap.ok) return page("Not a real tap", "This link didn't come from a disk's chip.", 400);
-    return page(`FLOPPY-${String(disk).padStart(2, "0")}`, `Real tap. This disk's chip has been tapped ${tap.counter} time${tap.counter === 1 ? "" : "s"}.`);
+    const name = `FLOPPY-${String(disk).padStart(2, "0")}`;
+    if (DISKS[disk] !== tap.uid) return page("Not that disk", `This chip isn't ${name}.`, 400);
+    return page(name, `Real tap. This disk's chip has been tapped ${tap.counter} time${tap.counter === 1 ? "" : "s"}.`);
   },
 };
