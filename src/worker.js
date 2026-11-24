@@ -1,4 +1,4 @@
-// disk.88x31.app: what a tap on a floppy disk's tag opens. Smallest version: check the tap and show the tap count.
+// disk.88x31.app: what a tap on a floppy disk's tag opens. Smallest version: check the tap and show which disk and the tap count.
 // It keeps nothing: no database, no cookie, no log. The key is the NTAG 424 factory key until the tags get their own.
 import { checkTap } from "./sun.js";
 
@@ -13,12 +13,14 @@ const page = (title, body, status = 200) =>
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname !== "/t") return page("88x31 floppy disks", "Tap a disk with your phone.");
+    const m = url.pathname.match(/^\/disk\/(\d{1,3})$/);
+    const disk = m ? Number(m[1]) : 0;
+    if (!disk) return page("88x31 floppy disks", "Tap a disk with your phone.");
     const e = url.searchParams.get("e") || "";
     // The tag's link has leftover placeholders after the signature (?uid=...), so read c as its first 16 hex digits.
     const c = ((url.searchParams.get("c") || "").match(/^[0-9a-f]{16}/i) || [""])[0];
     const tap = await checkTap(e, c).catch(() => ({ ok: false }));
     if (!tap.ok) return page("Not a real tap", "This link didn't come from a disk's chip.", 400);
-    return page("Real tap", `This disk's chip has been tapped ${tap.counter} time${tap.counter === 1 ? "" : "s"}.`);
+    return page(`FLOPPY-${String(disk).padStart(2, "0")}`, `Real tap. This disk's chip has been tapped ${tap.counter} time${tap.counter === 1 ? "" : "s"}.`);
   },
 };
