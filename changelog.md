@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Disk and motherboard pictures
+- A woken disk's page shows the disk and the motherboard side by side, with parts listed as installs are made. Placeholders for now. Removed: nothing.
+
 ## The bar restarts at every pick
 - Each wait now starts at the moment of the pick, so every install shows a full wait. Removed: the shared clock from the first pick, and installs stacking up.
 

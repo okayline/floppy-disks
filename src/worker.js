@@ -6,6 +6,7 @@
 import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
+import { installed } from "./parts.js";
 import { slots, choices, bootAt, BAR_MS } from "./install.js";
 
 const VISIT_MS = 10 * 60 * 1000;
@@ -65,6 +66,7 @@ export default {
         const s = slots(state, now);
         const total = PAIRS.length;
         if (request.method === "GET") {
+          const parts = installed(s.picks);
           // No time is given once every pick is made: the player is never told when the end is.
           if (s.done) {
             let st = state;
@@ -79,17 +81,17 @@ export default {
               ).bind(JSON.stringify(booted), row.disk).run();
               st = JSON.parse((await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first()).state);
             }
-            if (!st.booted_at) return json({ picked: s.picks, total });
+            if (!st.booted_at) return json({ parts, picked: s.picks, total });
             const mc = await env.DB.prepare("SELECT name FROM machines WHERE place = ?1").bind(st.machine).first();
-            return json({ picked: s.picks, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
+            return json({ parts, picked: s.picks, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
           }
           if (s.open < 1) {
             // The pick being installed is the last one; the bar runs from the slot before the next one to the next one.
             const last = state.picks[state.picks.length - 1];
-            return json({ picked: s.picks, total, installing: PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: Date.parse(s.next_unlock_at) - now, ms_total: BAR_MS });
+            return json({ parts, picked: s.picks, total, installing: PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: Date.parse(s.next_unlock_at) - now, ms_total: BAR_MS });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
-          return json({ picked: s.picks, total, pair: s.picks + 1, choices: ch.map((c) => c.name) });
+          return json({ parts, picked: s.picks, total, pair: s.picks + 1, choices: ch.map((c) => c.name) });
         }
         if (request.method !== "POST") return json({ error: "GET or POST only" }, 405);
         const body = await request.json().catch(() => ({}));
@@ -162,12 +164,16 @@ export default {
         `Chip ID: ${tap.uid.toUpperCase()}<br>` +
         `Signature: ${sig}<br>` +
         `Tap fingerprint: ${fingerprint}<br><br>` +
-        `<span id="wake">${wake}</span><span id="install"></span>`,
+        `<span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span>`,
       200,
       `<script>window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
-        `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
+        `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),P=document.getElementById("pics"),H={"x-visit":window.visit};` +
         `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
+        // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
+        `P.textContent="";const row=document.createElement("div"),pa=document.createElement("div"),pm=document.createElement("div");row.style.cssText="display:flex;gap:8px;margin:8px 0";` +
+        `pa.style.cssText=pm.style.cssText="flex:1;border:2px inset #fff;padding:8px;background:#fff;min-height:6em;text-align:center";pa.textContent="[disk image]";pm.append("[motherboard]");` +
+        `(j.parts||[]).forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)});row.append(pa,pm);P.append(row);` +
         `if(j.choices){I.append("Install which one?");` +
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
