@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.60";
+const FOOTER_VERSION = "v0.61";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -118,7 +118,15 @@ export default {
         const s = plan(state, now);
         const total = STEPS.length;
         if (request.method === "GET") {
-          const parts = s.started >= 1 ? installed(s.started) : undefined;
+          let parts = s.started >= 1 ? installed(s.started) : undefined;
+          // From the Motherboard on, the first four questions have already fixed the machine, so its own part names replace the plain ones. A missing row (or no table) keeps the plain name.
+          if (parts && s.started >= 8) {
+            try {
+              const rows = await env.DB.prepare("SELECT part, name FROM machine_parts WHERE place = ?1").bind(machinePlace(state.picks)).all();
+              const own = Object.fromEntries((rows.results || []).map((r) => [r.part, r.name]));
+              parts = parts.map((x) => own[x] || x);
+            } catch {}
+          }
           if (s.done) {
             let st = state;
             if (!st.booted_at && now >= bootAt(st)) {

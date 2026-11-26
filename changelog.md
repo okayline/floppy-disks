@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Parts named for the machine
+- From the motherboard on, the parts list names the machine's own motherboard, CPU and graphics card. Footer version v0.61. Removed: the plain part names for those three.
+
 ## Free install wording
 - The free install lines at the last two free levels now name the parts they add. Removed: the old part names in those two lines.
 
