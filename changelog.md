@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Game state has a database, and a tap opens a visit
+- The Worker now keeps each disk's last tap number and its game state in a database instead of KV, and a good tap opens a short visit the page can use for follow-up requests. Removed: the KV store for tap numbers.
+
 ## The page shows more about the tap
 - A disk's page now says it is secured and lists details of the tap that opened it. Removed: the one-line "Real tap" text.
 

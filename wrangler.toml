@@ -2,6 +2,7 @@ name = "floppy-disks"
 main = "src/worker.js"
 compatibility_date = "2026-10-01"
 
-[[kv_namespaces]]
-binding = "TAPS"
-id = "0fb2b214f90e41089690da3836e54a49"
+[[d1_databases]]
+binding = "DB"
+database_name = "floppy-disks"
+database_id = "d19a5443-458b-4765-9766-799e0d88d3b2"
