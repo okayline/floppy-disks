@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Title off the Disk panel
+- The Disk panel no longer repeats the disk's name under the floppy; the name stays in the public panel at the bottom. Removed: the Disk panel's heading.
+
 ## 3D floppy at the top
 - Each disk page now starts with a see-through 3D floppy in the disk's colour. It sits still until the disk is awake, then turns slowly and can be dragged. It sits straight on the panel's grey, with no white box. Removed: nothing.
 
