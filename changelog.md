@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag miss
+- A missed Defrag swing now shows no message; the screen just resets. Footer version v0.40. Removed: the "Missed" text.
+
 ## Defrag layout
 - The Defrag bar now sits above its button, in lighter pastel colours. Footer version v0.39. Removed: the old darker bar colours and the button-above-bar order.
 

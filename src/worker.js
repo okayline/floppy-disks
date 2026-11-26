@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.39";
+const FOOTER_VERSION = "v0.40";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -236,7 +236,7 @@ export default {
         `if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";fl.textContent="Fragmentation: "+j.frag+"%";` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=16,ZL=45+Math.random()*35,SWEEP=1800;` +
-        `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="Missed. Try again.";show();return}` +
+        `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
         `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"Defragmenting... "+hms(k.saved_ms)+" saved":k.error;show()};` +
         `db.onclick=()=>{if(SW){const p=(Date.now()-t0)/SWEEP*100;fin(p>=ZL&&p<=ZL+ZW);return}` +
         `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
