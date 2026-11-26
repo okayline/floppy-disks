@@ -13,13 +13,17 @@ const VISIT_MS = 10 * 60 * 1000;
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
-const page = (title, body, status = 200, script = "") =>
+// A page is one or more separate panels stacked on the teal background.
+const pages = (title, panels, status = 200, script = "") =>
   new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>` +
-      `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0">` +
-      `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;max-width:22em;word-break:break-all"><b id="t">${title}</b><p>${body}</p></div>${script}`,
+      `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0;padding:8px;box-sizing:border-box">` +
+      `<div style="width:min(22em,100%)">` +
+      panels.map((x) => `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;word-break:break-all;box-sizing:border-box;margin:12px 0">${x}</div>`).join("") +
+      `</div>${script}`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
   );
+const page = (title, body, status = 200) => pages(title, [`<b id="t">${title}</b><p>${body}</p>`], status);
 
 // The names a disk can be woken with (generated choices only, nothing typed). Shown as they are: no number until the first boot gives the disk its wake number.
 const nameWords = (disk) => {
@@ -30,11 +34,14 @@ const nameWords = (disk) => {
 // How a name is shown: the word, the disk number, and after the first boot the wake number (PINK-DISK-0307). The saved name is the word only.
 const label = (word, disk, wake) => `${word}-${String(disk).padStart(2, "0")}${wake ? String(wake).padStart(2, "0") : ""}`;
 
-// What to call a disk on a page: its picked name once woken, else FLOPPY-NN. Only used after a tap has checked out.
-const shownName = async (env, disk, fallback) => {
+// What anyone can see without a tap: no tap number, chip, signature, installs or machine. Reads only, writes nothing.
+// Status: asleep (not woken), building (woken, not booted), built (booted).
+const publicView = async (env, disk, note, status = 200) => {
   const row = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
   const st = JSON.parse(row?.state || "{}");
-  return st.woke_at ? label(st.name, disk, st.wake_no) : fallback;
+  const heading = st.woke_at ? label(st.name, disk, st.wake_no) : `FLOPPY-${String(disk).padStart(2, "0")}`;
+  const state = st.booted_at ? "built" : st.woke_at ? "building" : "asleep";
+  return pages(heading, [`<b id="t">${heading}</b><p>88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Status: ${state}</p><p>${note}</p>`], status);
 };
 
 const json = (obj, status = 200) =>
@@ -136,15 +143,17 @@ export default {
     // Fail closed: without the secret every key would be guessable.
     if (!env.TAG_SECRET) return page("Not set up", "This page can't check taps right now.", 500);
     if (!DISKS[disk]) return page("Not that disk", `${name} isn't one of the disks.`, 400);
+    // No tap in the link: the public panel only.
+    if (!url.searchParams.get("picc_data") && !url.searchParams.get("cmac")) return publicView(env, disk, "Tap the disk with your phone to open it.");
     const key = await diskKey(env.TAG_SECRET, DISKS[disk]);
     const tap = await checkTap(url.searchParams.get("picc_data") || "", url.searchParams.get("cmac") || "", key).catch(() => ({ ok: false }));
-    if (!tap.ok) return page("Not a real tap", `This link didn't come from ${name}'s chip.`, 400);
+    if (!tap.ok) return publicView(env, disk, `This link didn't come from ${name}'s chip.`, 400);
     // A tap opens the page once: its number must be higher than the last one seen for this disk (a refresh, back, bookmark or copied link is refused).
     // One statement does the check and the save, so two quick requests with the same tap can't both pass.
     const saved = await env.DB.prepare(
       "INSERT INTO disks (disk, last_tap) VALUES (?1, ?2) ON CONFLICT(disk) DO UPDATE SET last_tap = ?2 WHERE ?2 > disks.last_tap"
     ).bind(disk, tap.counter).run();
-    if (!saved.meta.changes) return page("Tap the disk again", `${await shownName(env, disk, name)} opens from a fresh tap. Hold your phone to the disk.`, 403);
+    if (!saved.meta.changes) return publicView(env, disk, "This link opens from a fresh tap. Hold your phone to the disk.", 403);
     // The tap opens a visit: a random token, kept here only as its hash, good for VISIT_MS.
     const visit = hex(crypto.getRandomValues(new Uint8Array(16)));
     await env.DB.prepare("DELETE FROM visits WHERE expires < ?1").bind(Date.now()).run();
@@ -156,15 +165,19 @@ export default {
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
-    return page(
-      awake.woke_at ? label(awake.name, disk, awake.wake_no) : name,
-      `<b>Secured:</b> signature verified.<br><br>` +
-        `Seal: ${DISKS[disk]}<br>` +
-        `Tap: ${tap.counter}<br>` +
-        `Chip ID: ${tap.uid.toUpperCase()}<br>` +
-        `Signature: ${sig}<br>` +
-        `Tap fingerprint: ${fingerprint}<br><br>` +
-        `<span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span>`,
+    // Two panels for the tapper: the Disk panel (the game) and the Info panel (what the tap carries).
+    const heading = awake.woke_at ? label(awake.name, disk, awake.wake_no) : name;
+    return pages(
+      heading,
+      [
+        `<b id="t">${heading}</b><p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
+        `<b>Secured:</b> signature verified.<br><br>` +
+          `Seal: ${DISKS[disk]}<br>` +
+          `Tap: ${tap.counter}<br>` +
+          `Chip ID: ${tap.uid.toUpperCase()}<br>` +
+          `Signature: ${sig}<br>` +
+          `Tap fingerprint: ${fingerprint}`,
+      ],
       200,
       `<script>window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +

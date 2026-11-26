@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Public page and separate panels
+- /disk/NN now opens for anyone with a small public panel; a good tap adds a Disk panel and a separate Info panel. Removed: the "Not a real tap" and "Tap the disk again" pages (they show the public panel with a note).
+
 ## Layout, dots and buttons
 - The disk is alone at first and the motherboard appears beside it after the first install, with the disk staying put. The dots move slower and the install buttons are much bigger. Removed: the motherboard shown before the first install.
 
