@@ -153,8 +153,8 @@ export default {
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(document.createElement("br"),c)})}` +
-        `else if(j.next_unlock_at){const m=Math.max(0,Math.ceil((Date.parse(j.next_unlock_at)-Date.now())/60000));I.textContent="Next install in "+Math.floor(m/60)+"h "+m%60+"m ("+j.picked+" of "+j.total+" installed)"}` +
-        `else I.textContent=j.picked+" of "+j.total+" installed"};` +
+        `else if(j.next_unlock_at){const m=Math.max(0,Math.ceil((Date.parse(j.next_unlock_at)-Date.now())/60000));I.textContent="Next install in "+Math.floor(m/60)+"h "+m%60+"m"}` +
+        `else I.textContent="Copying files..."};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
