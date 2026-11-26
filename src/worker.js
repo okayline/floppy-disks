@@ -175,20 +175,20 @@ export default {
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
-    // Three panels for the tapper: the Disk panel (the game), the Info panel (what the tap carries) and the public panel at the bottom.
+    // Three panels for the tapper: the public panel on top (with the floppy), the Disk panel (the game) and the Info panel (what the tap carries).
     const heading = awake.woke_at ? label(awake.name, disk, awake.wake_no) : name;
     return pages(
       heading,
       [
-        floppyCss + floppyBox + `<p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
+        // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
+        floppyCss + floppyBox + publicPanel(awake, disk, "", true, tap.counter).html,
+        `<p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
         `<b>Secured:</b> signature verified.<br><br>` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
           `Chip ID: ${tap.uid.toUpperCase()}<br>` +
           `Signature: ${sig}<br>` +
           `Tap fingerprint: ${fingerprint}`,
-        // The public panel again at the bottom, as anyone sees it.
-        publicPanel(awake, disk, "", true, tap.counter).html,
       ],
       200,
       `<script>${floppyScript(COLOURS[disk], !!awake.woke_at)}window.visit="${visit}";` +

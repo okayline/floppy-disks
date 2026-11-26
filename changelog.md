@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Public panel on top
+- A tapper's page now starts with the public panel (with the floppy), then the Disk panel, then the Info panel. Removed: the public panel at the bottom.
+
 ## Title off the Disk panel
 - The Disk panel no longer repeats the disk's name under the floppy; the name stays in the public panel at the bottom. Removed: the Disk panel's heading.
 
