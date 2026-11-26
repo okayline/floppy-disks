@@ -1,7 +1,7 @@
 // The install flow: a pick of 1 of 2, one slot per bar. Everything is worked out from the saved state and the clock when someone taps (no scheduled job).
 import { PAIRS } from "./pairs.js";
 
-export const BAR_MS = 6 * 60 * 60 * 1000; // one bar, life 1; the timing is to be redone
+export const BAR_MS = 6 * 60 * 1000; // one bar. 6 MINUTES FOR TESTING: the real value is 6 hours (6 * 60 * 60 * 1000), to be set back
 
 // Slot k opens at first_pick_at + (k-1) * BAR_MS; the first slot is open before any pick. Open slots wait, with no cap.
 export function slots(state, now) {
