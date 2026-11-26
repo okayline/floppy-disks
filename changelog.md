@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Fragmentation on every install
+- The Fragmentation line now shows on every install screen from the first one (starting at 0%), not only the free installs, and builds more slowly. Defrag takes off half as much. Footer version v0.49. Removed: the line being hidden on the question installs, and the faster build and bigger Defrag.
+
 ## Disk panel sizes to its screen
 - The Disk panel is no longer one fixed height. Each kind of screen (question, install, free install, boot) keeps the tallest height it has reached, so small text changes do not make it wobble, and a free install leaves room for the Defrag meter from the start. Footer version v0.48. Removed: the fixed 410px panel height.
 

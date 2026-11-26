@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.48";
+const FOOTER_VERSION = "v0.49";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -84,7 +84,7 @@ export default {
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
       if (sm[2] === "defrag") {
-        // Defrag: only while a free install runs. It takes a fifth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
+        // Defrag: only while a free install runs. It takes a tenth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
         if (request.method !== "POST") return json({ error: "POST only" }, 405);
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         const now = Date.now();
@@ -126,9 +126,9 @@ export default {
             return json({ parts, picked: s.started, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
           }
           if (s.open < 1) {
-            // The bar running is a free install's, or the last pick's own.
+            // The bar running is a free install's, or the last pick's own; both show the fragmentation line, only a free install offers Defrag.
             const last = state.picks[state.picks.length - 1];
-            return json({ parts, picked: s.started, total, installing: s.free || PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: s.free ? Math.round((fragMs(state, now) / FRAG_CAP_MS) * 100) : undefined, frag_rate: s.free ? (FRAG_RATE * 100) / FRAG_CAP_MS : undefined });
+            return json({ parts, picked: s.started, total, installing: s.free || PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 100), frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, can_defrag: !!s.free });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
           return json({ parts, picked: s.started, total, pair: s.picks + 1, choices: ch.options.map((c) => c.name) });
@@ -240,7 +240,7 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // Defrag is a timing game: the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";fl.textContent="Fragmentation: "+j.frag+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.round(Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)))+"%"};` +
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";fl.textContent="Fragmentation: "+j.frag+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.round(Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)))+"%"};if(!j.can_defrag)I.append(fl);else{` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=12,ZL=45+Math.random()*35,SWEEP=1800;const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
@@ -251,14 +251,14 @@ export default {
         `zn.style.cssText="position:absolute;top:0;bottom:0;background:#fff3a0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
         `cr.style.cssText="position:absolute;top:100%;margin:3px 0 0 -8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #000";` +
         `tr.append(zn,cr);mt.append(tr);db.textContent="Stop";t0=Date.now();` +
-        `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,mt,db)}` +
+        `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,mt,db)}}` +
         `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show(true);return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
-        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));fit(j.frag!==undefined?"f":"i")};` +
-        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}fit(j.choices?"q":j.booted?"b":j.frag!==undefined?"f":"i")};` +
+        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));fit(j.can_defrag?"f":"i")};` +
+        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}fit(j.choices?"q":j.booted?"b":j.can_defrag?"f":"i")};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +

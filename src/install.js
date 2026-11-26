@@ -22,12 +22,12 @@ const FREE_AT = {}; // step number of a free install -> its place in FREE
   } }
 export const QUESTIONS = QSTEP.length;
 
-// Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a quarter of a time-unit per time-unit, up to a cap of a third of a bar
-// (2 hours of 6), reached after one and a third bars (8 hours). A successful press takes a fifth of the cap (what is built up, if less) off the running bar (it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
-export const FRAG_RATE = 0.25;
+// Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a tenth of a time-unit per time-unit, up to a cap of a third of a bar
+// (2 hours of 6), reached after three and a third bars (20 hours). A successful press takes a tenth of the cap (what is built up, if less) off the running bar (it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
+export const FRAG_RATE = 0.1;
 export const FRAG_CAP_MS = BAR_MS / 3;
 // One successful Defrag takes this fraction of the cap off (not everything).
-export const FRAG_STEP = 0.2;
+export const FRAG_STEP = 0.1;
 export const fragMs = (state, now) => Math.min(FRAG_CAP_MS, Math.max(0, (now - Date.parse(state.defrag_at || state.picks[0].at)) * FRAG_RATE));
 
 // Where the disk is at time `now`: how many questions are picked, how many of the 14 steps have started (the parts shown follow it), and either
