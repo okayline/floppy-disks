@@ -96,7 +96,7 @@ export default {
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
       if (sm[2] === "defrag") {
-        // Defrag: only while a free install runs. It takes a tenth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
+        // Defrag: only while a free install runs. It takes a twentieth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
         if (request.method !== "POST") return json({ error: "POST only" }, 405);
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         const now = Date.now();
@@ -109,7 +109,7 @@ export default {
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
           .bind(JSON.stringify({ ...state, picks, defrag_at: new Date(Math.round(now - (frag - saved) / FRAG_RATE)).toISOString() }), row.disk, d.state).run();
         if (!done.meta.changes) return json({ error: "Try again" }, 409);
-        return json({ saved_ms: saved, saved_pct: Math.max(1, Math.round((saved / FRAG_CAP_MS) * 100)) });
+        return json({ saved_ms: saved, saved_pct: Math.max(0.1, Math.round((saved / FRAG_CAP_MS) * 1000) / 10) });
       }
       if (sm[2] === "install") {
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
@@ -148,7 +148,7 @@ export default {
           if (s.open < 1) {
             // The bar running is a free install's, or the last pick's own; both show the fragmentation line, only a free install offers Defrag.
             const last = state.picks[state.picks.length - 1];
-            return json({ parts, picked: s.started, total, installing: s.free || "Installing " + PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 100), frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, can_defrag: !!s.free });
+            return json({ parts, picked: s.started, total, installing: s.free || "Installing " + PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 1000) / 10, frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, can_defrag: !!s.free });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
           return json({ parts, picked: s.started, total, pair: s.picks + 1, choices: ch.options.map((c) => c.name) });
@@ -261,11 +261,11 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation in the reserved space): the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.round(Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)))+"%"};if(!j.can_defrag)I.append(fl);else{` +
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)).toFixed(1)+"%"};if(!j.can_defrag)I.append(fl);else{` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=Math.max(4,12-1.5*HITS),ZL=45+Math.random()*35,SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
-        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok)HITS++;NOTE=q.ok?"-"+k.saved_pct+"% fragmentation":k.error;show()};` +
+        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok)HITS++;NOTE=q.ok?"-"+k.saved_pct.toFixed(1)+"% fragmentation":k.error;show()};` +
         `db.onclick=()=>{if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
         `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
         `tr.style.cssText="position:relative;height:22px;background:#d9b8f0;border:2px inset #fff;margin:12px 0 26px";` +
