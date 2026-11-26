@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag gets harder
+- Each successful Defrag hit makes the next one harder, and a hit shows how much fragmentation it took off. Footer version v0.54. Removed: the same difficulty on every try.
+
 ## Main page
 - The main page (no disk) now shows the pink disk picture, then the How to play panel, then a Privacy panel. Footer version v0.53. Removed: the "Tap a disk with your phone" line and its plain panel.
 
