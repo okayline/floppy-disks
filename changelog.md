@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Floppy still until the boot, no shadow
+- The floppy faces straight ahead and sits still until the disk has booted, then it turns and can be dragged. Removed: the shadow under it, and the turning while a disk is asleep or building.
+
 ## Short address
 - After a good tap the address bar shows the short /disk/NN instead of the long tap link. Removed: nothing.
 

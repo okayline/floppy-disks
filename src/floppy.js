@@ -1,9 +1,8 @@
-// The 3D floppy at the top of a disk page: pure CSS 3D, no library, drawn in the disk's own colour. Asleep disks sit still; once woken it turns slowly and can be dragged.
+// The 3D floppy at the top of a disk page: pure CSS 3D, no library, drawn in the disk's own colour. Until a disk has booted it sits still, facing straight ahead; after the boot it turns slowly and can be dragged.
 // The drawing code is one self-contained function, sent to the page as text. Sizes are on a 90 x 94 grid (about a 3.5" disk in millimetres); the pictures are by eye from photos.
 export const floppyCss = `<style>
   .fs { perspective: 900px; height: 300px; display: grid; place-items: center; cursor: default; user-select: none; position: relative; margin: 0 0 12px; overflow: hidden; --u: 2.1px; --W: calc(var(--u) * 90); --H: calc(var(--u) * 94); --T: calc(var(--u) * 6); }
   .fs.live:active { cursor: grabbing; }
-  .shadow { position: absolute; bottom: 22px; left: 50%; width: calc(var(--W) * .8); height: 16px; margin-left: calc(var(--W) * -.4); background: radial-gradient(closest-side, rgba(0,0,0,.28), transparent); pointer-events: none; }
   .disk { position: relative; width: var(--W); height: var(--H); transform-style: preserve-3d; }
   .disk > * { position: absolute; }
   .disk svg { width: 100%; height: 100%; display: block; overflow: visible; }
@@ -19,7 +18,7 @@ export const floppyCss = `<style>
   .fs.live { touch-action: none; cursor: grab; }
 </style>`;
 
-export const floppyBox = `<div class="fs" id="fs"><div class="shadow"></div><div class="disk" id="fd"></div></div>`;
+export const floppyBox = `<div class="fs" id="fs"><div class="disk" id="fd"></div></div>`;
 
 function client(colour, live) {
   const d = document.getElementById("fd");
@@ -112,7 +111,7 @@ function client(colour, live) {
   build();
   function spin(disk) {
     const scene = disk.parentElement;
-    let rx = -14, ry = -30, vx = 0, vy = 0, drag = false, lx = 0, ly = 0;
+    let rx = 0, ry = 0, vx = 0, vy = 0, drag = false, lx = 0, ly = 0;
     const apply = () => { disk.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`; };
     scene.addEventListener("pointerdown", (e) => { drag = true; lx = e.clientX; ly = e.clientY; scene.setPointerCapture(e.pointerId); });
     scene.addEventListener("pointermove", (e) => { if (!drag) return; vy = (e.clientX - lx) * 0.4; vx = -(e.clientY - ly) * 0.4; ry += vy; rx += vx; lx = e.clientX; ly = e.clientY; apply(); });
@@ -124,8 +123,8 @@ function client(colour, live) {
     })();
   }
   
-  // The pose it rests in while asleep; waking starts the turn and the drag.
-  let go = false, rx = -14, ry = -30;
+  // The pose it rests in (straight ahead) until the disk is built; the boot starts the turn and the drag.
+  let go = false, rx = 0, ry = 0;
   d.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
   window.floppyLive = () => { if (go) return; go = true; scene.classList.add("live"); spin(d); };
   if (live) window.floppyLive();
