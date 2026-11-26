@@ -21,3 +21,6 @@ export async function choices(secret, disk, n) {
   const b = { name: game, side: "game" };
   return bytes[0] & 1 ? [b, a] : [a, b];
 }
+
+// The boot happens one bar after the last slot opens: 14 bars after the first pick. Never sent to the page.
+export const bootAt = (state) => Date.parse(state.first_pick_at) + PAIRS.length * BAR_MS;

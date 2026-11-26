@@ -6,7 +6,7 @@
 import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
-import { slots, choices, BAR_MS } from "./install.js";
+import { slots, choices, bootAt, BAR_MS } from "./install.js";
 
 const VISIT_MS = 10 * 60 * 1000;
 const hex = (b) => toHex(new Uint8Array(b));
@@ -26,14 +26,14 @@ const nameWords = (disk) => {
   return c ? [`${c}-DISK`, "FLOPPY", "BOOTDISK", `NEON-${c}`] : null;
 };
 
-// How a name is shown: the word and the disk number. The wake number is added after the first boot (not built). The saved name is the word only.
-const label = (word, disk) => `${word}-${String(disk).padStart(2, "0")}`;
+// How a name is shown: the word, the disk number, and after the first boot the wake number (PINK-DISK-0307). The saved name is the word only.
+const label = (word, disk, wake) => `${word}-${String(disk).padStart(2, "0")}${wake ? String(wake).padStart(2, "0") : ""}`;
 
 // What to call a disk on a page: its picked name once woken, else FLOPPY-NN. Only used after a tap has checked out.
 const shownName = async (env, disk, fallback) => {
   const row = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
   const st = JSON.parse(row?.state || "{}");
-  return st.woke_at ? label(st.name, disk) : fallback;
+  return st.woke_at ? label(st.name, disk, st.wake_no) : fallback;
 };
 
 const json = (obj, status = 200) =>
@@ -66,7 +66,23 @@ export default {
         const total = PAIRS.length;
         if (request.method === "GET") {
           // No time is given once every pick is made: the player is never told when the end is.
-          if (s.done) return json({ picked: s.picks, total });
+          if (s.done) {
+            let st = state;
+            if (!st.booted_at && now >= bootAt(st)) {
+              // The boot: the machine is picked by how many games are among the picks. The wake number is the next free one across all disks.
+              // One statement does the numbering and the save, and only for a disk that has not booted, so two requests can't boot it twice or take the same number.
+              const games = st.picks.filter((p) => p.side === "game").length;
+              const at = new Date(now).toISOString();
+              const booted = { ...st, booted_at: at, machine: games, history: [...(st.history || []), { event: "boot", machine: games, at }] };
+              await env.DB.prepare(
+                "UPDATE disks SET state = json_set(?1, '$.wake_no', (SELECT COALESCE(MAX(json_extract(state, '$.wake_no')), 0) + 1 FROM disks)) WHERE disk = ?2 AND json_extract(state, '$.booted_at') IS NULL"
+              ).bind(JSON.stringify(booted), row.disk).run();
+              st = JSON.parse((await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first()).state);
+            }
+            if (!st.booted_at) return json({ picked: s.picks, total });
+            const mc = await env.DB.prepare("SELECT name FROM machines WHERE place = ?1").bind(st.machine).first();
+            return json({ picked: s.picks, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
+          }
           if (s.open < 1) {
             // The pick being installed is the last one; the bar runs from the slot before the next one to the next one.
             const last = state.picks[state.picks.length - 1];
@@ -140,7 +156,7 @@ export default {
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
     return page(
-      awake.woke_at ? label(awake.name, disk) : name,
+      awake.woke_at ? label(awake.name, disk, awake.wake_no) : name,
       `<b>Secured:</b> signature verified.<br><br>` +
         `Seal: ${DISKS[disk]}<br>` +
         `Tap: ${tap.counter}<br>` +
@@ -157,13 +173,14 @@ export default {
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(document.createElement("br"),c)})}` +
+        `else if(j.booted){["Starting disk...","Checking 14 installs... OK","Found "+j.machine,j.name+" is awake."].forEach(x=>{const q=document.createElement("div");q.textContent=x;I.append(q)});document.getElementById("t").textContent=j.name}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         // After the last pick there is no end time to show, so the bar only slides (3 blocks going round) and there is no estimate.
-        `const end=Date.now()+(j.ms_left||0),tick=()=>{k++;d.textContent=".".repeat(k%3+1);` +
+        `const end=Date.now()+(j.ms_left||0),tick=()=>{k++;d.textContent=".".repeat(k%3+1);if(!j.installing&&k%200==0){show();return}` +
         `if(!j.installing){bl.forEach((x,i)=>{x.style.background=(i-k%N+N)%N<3?"#000080":"transparent"});return}` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
