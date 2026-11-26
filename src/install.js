@@ -22,6 +22,12 @@ const FREE_AT = {}; // step number of a free install -> its place in FREE
   } }
 export const QUESTIONS = QSTEP.length;
 
+// Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at half a time-unit per time-unit, up to a cap of a third of a bar
+// (2 hours of 6), reached after two thirds of a bar (4 hours). A press takes what has built up off the running bar (it moves the rest of the schedule earlier) and starts fragmentation again from zero.
+export const FRAG_RATE = 0.5;
+export const FRAG_CAP_MS = BAR_MS / 3;
+export const fragMs = (state, now) => Math.min(FRAG_CAP_MS, Math.max(0, (now - Date.parse(state.defrag_at || state.picks[0].at)) * FRAG_RATE));
+
 // Where the disk is at time `now`: how many questions are picked, how many of the 14 steps have started (the parts shown follow it), and either
 // done (all questions picked), open (the next question can be answered), or the bar that is running (a free install's name, or the pick's own: no `free`) with its time left.
 export function plan(state, now) {
@@ -31,9 +37,10 @@ export function plan(state, now) {
   const at = lastPick(state), free = FREE_AFTER[picks - 1], stage = Math.floor((now - at) / BAR_MS);
   if (stage > free) return { picks, started: QSTEP[picks - 1] + free, open: 1 };
   const step = QSTEP[picks - 1] + stage;
-  return { picks, started: step, open: 0, free: stage ? FREE[FREE_AT[step]] : undefined, ms_left: at + (stage + 1) * BAR_MS - now };
+  return { picks, started: step, open: 0, free: stage ? FREE[FREE_AT[step]] : undefined, ms_left: at + (stage + 1) * BAR_MS - now, end: at + (free + 1) * BAR_MS };
 }
-const lastPick = (state) => Date.parse(state.picks[state.picks.length - 1].at);
+// When the last pick's bar started, moved earlier by what Defrag has taken off since that pick.
+const lastPick = (state) => { const p = state.picks[state.picks.length - 1]; return Date.parse(p.at) - (p.saved || 0); };
 
 const hash = async (text) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 

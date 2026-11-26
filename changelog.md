@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag
+- A free install's screen now has a Defrag button and a fragmentation line; pressing it takes time off the wait. Footer version v0.37. Removed: nothing.
+
 ## 8 questions, 6 free installs
 - The build is still 14 steps, but only 8 are questions; the other 6 install by themselves. A disk's questions are drawn from the pool and differ from disk to disk. The machine now comes from some of the answers, not a count. Footer version v0.36. Removed: the 14 fixed questions and the count that picked the machine.
 

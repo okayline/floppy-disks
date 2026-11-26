@@ -7,7 +7,7 @@ import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
 import { installed } from "./parts.js";
-import { plan, choices, bootAt, machinePlace, STEPS, BAR_MS } from "./install.js";
+import { plan, choices, bootAt, machinePlace, fragMs, FRAG_CAP_MS, STEPS, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.36";
+const FOOTER_VERSION = "v0.37";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -71,7 +71,7 @@ async function diskKey(secret, seal) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const sm = url.pathname.match(/^\/disk\/(\d{1,3})\/(state|names|wake|install)$/);
+    const sm = url.pathname.match(/^\/disk\/(\d{1,3})\/(state|names|wake|install|defrag)$/);
     if (sm) {
       // The visit token (header x-visit) must be live and belong to this disk. It proves a good tap opened this visit.
       const token = request.headers.get("x-visit") || "";
@@ -82,6 +82,22 @@ export default {
       const d = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first();
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
+      if (sm[2] === "defrag") {
+        // Defrag: only while a free install runs. It takes the built-up fragmentation (at most what is left of the schedule) off the bar and starts it again from zero.
+        if (request.method !== "POST") return json({ error: "POST only" }, 405);
+        if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
+        const now = Date.now();
+        const s = plan(state, now);
+        if (!s.free) return json({ error: "Nothing to defragment right now" }, 409);
+        const saved = Math.floor(Math.min(fragMs(state, now), s.end - now));
+        if (saved < 1000) return json({ error: "Nothing to defragment yet" }, 409);
+        const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
+        // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
+        const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
+          .bind(JSON.stringify({ ...state, picks, defrag_at: new Date(now).toISOString() }), row.disk, d.state).run();
+        if (!done.meta.changes) return json({ error: "Try again" }, 409);
+        return json({ saved_ms: saved });
+      }
       if (sm[2] === "install") {
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         if (!env.TAG_SECRET) return json({ error: "Not set up" }, 500);
@@ -111,7 +127,7 @@ export default {
           if (s.open < 1) {
             // The bar running is a free install's, or the last pick's own.
             const last = state.picks[state.picks.length - 1];
-            return json({ parts, picked: s.started, total, installing: s.free || PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS });
+            return json({ parts, picked: s.started, total, installing: s.free || PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: s.free ? Math.round((fragMs(state, now) / FRAG_CAP_MS) * 100) : undefined });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
           return json({ parts, picked: s.started, total, pair: s.picks + 1, choices: ch.options.map((c) => c.name) });
@@ -202,7 +218,7 @@ export default {
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
-        `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
+        `let T,NOTE="";const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
         `const pm=document.getElementById("pm");pm.textContent="";pm.style.cssText="${PM_STYLE}";` +
         `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
@@ -215,13 +231,17 @@ export default {
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
-        `e.style.cssText="font-size:.8em";I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
+        `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
+        `if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button");fl.style.cssText="font-size:.8em";fl.textContent="Fragmentation: "+j.frag+"%";` +
+        `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
+        `db.onclick=async()=>{const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"Defragmenting... "+hms(k.saved_ms)+" saved":k.error;show()};I.append(fl,db)}` +
+        `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
         `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"))};` +
-        `T=setInterval(tick,500);tick()}};` +
+        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
