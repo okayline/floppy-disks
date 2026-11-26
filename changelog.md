@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Free install wording
+- The free install lines at the last two free levels now name the parts they add. Removed: the old part names in those two lines.
+
 ## Parts in a new order
 - The parts now go in a different order, starting with the floppy drive. Footer version v0.60. Removed: the old order.
 
