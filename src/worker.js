@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.42";
+const FOOTER_VERSION = "v0.43";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -205,8 +205,8 @@ export default {
       [
         // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
         publicPanel(awake, disk, "", true, tap.counter).html,
-        // The Disk panel: the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
-        floppyCss + `<p><span id="wake">${wake}</span></p><div id="pics" style="display:flex;gap:8px;margin:8px 0"><div style="flex:1;box-sizing:border-box;min-width:0">${floppyBox(true)}</div><div id="pm" style="${PM_STYLE}"></div></div><span id="install"></span>`,
+        // The Disk panel (a fixed height, 460px of content, so it does not change size as the screens change; measured at 390px wide, tallest state about 430): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
+        `<div style="height:460px;overflow:auto">` + floppyCss + `<p><span id="wake">${wake}</span></p><div id="pics" style="display:flex;gap:8px;margin:8px 0"><div style="flex:1;box-sizing:border-box;min-width:0">${floppyBox(true)}</div><div id="pm" style="${PM_STYLE}"></div></div><span id="install"></span></div>`,
         `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +

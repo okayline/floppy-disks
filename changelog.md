@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Fixed Disk panel height
+- The Disk panel keeps one height whatever screen it shows. Footer version v0.43. Removed: the panel resizing with its contents.
+
 ## Defrag zone narrower
 - The Defrag hit zone is a little narrower. Footer version v0.42. Removed: the wider zone.
 
