@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Part names capitalized
+- The part names on the motherboard now start with capital letters, to match the free installs. Footer version v0.59. Removed: the lowercase part names.
+
 ## Free install wording
 - The free installs now read with capital letters, and two of them have their own wording. Footer version v0.58. Removed: the lowercase part names.
 
