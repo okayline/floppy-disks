@@ -1,7 +1,7 @@
 // The 3D floppy at the top of a disk page: pure CSS 3D, no library, drawn in the disk's own colour. Asleep disks sit still; once woken it turns slowly and can be dragged.
 // The drawing code is one self-contained function, sent to the page as text. Sizes are on a 90 x 94 grid (about a 3.5" disk in millimetres); the pictures are by eye from photos.
 export const floppyCss = `<style>
-  .fs { perspective: 900px; height: 300px; display: grid; place-items: center; cursor: default; user-select: none; position: relative; background: #fff; border: 2px inset #fff; margin: 0 0 12px; overflow: hidden; --u: 2.1px; --W: calc(var(--u) * 90); --H: calc(var(--u) * 94); --T: calc(var(--u) * 6); }
+  .fs { perspective: 900px; height: 300px; display: grid; place-items: center; cursor: default; user-select: none; position: relative; margin: 0 0 12px; overflow: hidden; --u: 2.1px; --W: calc(var(--u) * 90); --H: calc(var(--u) * 94); --T: calc(var(--u) * 6); }
   .fs.live:active { cursor: grabbing; }
   .shadow { position: absolute; bottom: 22px; left: 50%; width: calc(var(--W) * .8); height: 16px; margin-left: calc(var(--W) * -.4); background: radial-gradient(closest-side, rgba(0,0,0,.28), transparent); pointer-events: none; }
   .disk { position: relative; width: var(--W); height: var(--H); transform-style: preserve-3d; }

@@ -3,7 +3,7 @@
 Newest first.
 
 ## 3D floppy at the top
-- Each disk page now starts with a see-through 3D floppy in the disk's colour. It sits still until the disk is awake, then turns slowly and can be dragged. Removed: nothing.
+- Each disk page now starts with a see-through 3D floppy in the disk's colour. It sits still until the disk is awake, then turns slowly and can be dragged. It sits straight on the panel's grey, with no white box. Removed: nothing.
 
 ## Taps on the public panel
 - The public panel now shows the number of taps. Removed: nothing.
