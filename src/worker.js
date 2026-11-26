@@ -119,14 +119,6 @@ export default {
         const total = STEPS.length;
         if (request.method === "GET") {
           let parts = s.started >= 1 ? installed(s.started) : undefined;
-          // From the Motherboard on, the first four questions have already fixed the machine, so its own part names replace the plain ones. A missing row (or no table) keeps the plain name.
-          if (parts && s.started >= 8) {
-            try {
-              const rows = await env.DB.prepare("SELECT part, name FROM machine_parts WHERE place = ?1").bind(machinePlace(state.picks)).all();
-              const own = Object.fromEntries((rows.results || []).map((r) => [r.part, r.name]));
-              parts = parts.map((x) => own[x] || x);
-            } catch {}
-          }
           if (s.done) {
             let st = state;
             if (!st.booted_at && now >= bootAt(st)) {
@@ -143,6 +135,12 @@ export default {
             // The wait for the boot shows like the others: a bar and the time left (kura asked for it; it does show when the end is).
             if (!st.booted_at) return json({ parts, picked: s.started, total, ms_left: bootAt(st) - now, ms_total: BAR_MS });
             const mc = await env.DB.prepare("SELECT name FROM machines WHERE place = ?1").bind(st.machine).first();
+            // The machine's own part names show only now, at the end; until the boot the list has the plain names. A missing row (or no table) keeps the plain name.
+            try {
+              const rows = await env.DB.prepare("SELECT part, name FROM machine_parts WHERE place = ?1").bind(st.machine).all();
+              const own = Object.fromEntries((rows.results || []).map((r) => [r.part, r.name]));
+              parts = parts.map((x) => own[x] || x);
+            } catch {}
             return json({ parts, picked: s.started, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
           }
           if (s.open < 1) {
@@ -261,7 +259,7 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation in the reserved space): the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now();let SH=j.frag,NX=L0+400+Math.random()*2100;FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+(t-L0)*(j.frag_rate||0));NX=t+400+Math.random()*2100}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%"};if(!j.can_defrag)I.append(fl);else{` +
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now();let SH=j.frag,NX=L0+600+Math.random()*3150;FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+(t-L0)*(j.frag_rate||0));NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%"};if(!j.can_defrag)I.append(fl);else{` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=Math.max(4,12-1.5*HITS),ZL=45+Math.random()*35,SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
