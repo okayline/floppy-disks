@@ -2,6 +2,9 @@
 
 Newest first.
 
+## The page uses the picked name
+- A woken disk's page now shows its picked name as the heading. Removed: the separate name line.
+
 ## Names show the disk number
 - A woken disk's name now ends with its disk number. Removed: nothing.
 

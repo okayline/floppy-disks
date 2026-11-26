@@ -14,7 +14,7 @@ const page = (title, body, status = 200, script = "") =>
   new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>` +
       `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0">` +
-      `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;max-width:22em;word-break:break-all"><b>${title}</b><p>${body}</p></div>${script}`,
+      `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;max-width:22em;word-break:break-all"><b id="t">${title}</b><p>${body}</p></div>${script}`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
   );
 
@@ -26,6 +26,13 @@ const nameWords = (disk) => {
 
 // How a name is shown: the word and the disk number. The wake number is added after the first boot (not built). The saved name is the word only.
 const label = (word, disk) => `${word}-${String(disk).padStart(2, "0")}`;
+
+// What to call a disk on a page: its picked name once woken, else FLOPPY-NN. Only used after a tap has checked out.
+const shownName = async (env, disk, fallback) => {
+  const row = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
+  const st = JSON.parse(row?.state || "{}");
+  return st.woke_at ? label(st.name, disk) : fallback;
+};
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -83,7 +90,7 @@ export default {
     const saved = await env.DB.prepare(
       "INSERT INTO disks (disk, last_tap) VALUES (?1, ?2) ON CONFLICT(disk) DO UPDATE SET last_tap = ?2 WHERE ?2 > disks.last_tap"
     ).bind(disk, tap.counter).run();
-    if (!saved.meta.changes) return page("Tap the disk again", `${name} opens from a fresh tap. Hold your phone to the disk.`, 403);
+    if (!saved.meta.changes) return page("Tap the disk again", `${await shownName(env, disk, name)} opens from a fresh tap. Hold your phone to the disk.`, 403);
     // The tap opens a visit: a random token, kept here only as its hash, good for VISIT_MS.
     const visit = hex(crypto.getRandomValues(new Uint8Array(16)));
     await env.DB.prepare("DELETE FROM visits WHERE expires < ?1").bind(Date.now()).run();
@@ -91,12 +98,12 @@ export default {
     const cur = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
     const awake = JSON.parse(cur?.state || "{}");
     // A sleeping disk shows one button; the page's script (tokens stay in page memory) asks for the names and wakes it.
-    const wake = awake.woke_at ? `Name: ${label(awake.name, disk)}` : `<button id="b">Wake up</button>`;
+    const wake = awake.woke_at ? "" : `<button id="b">Wake up</button>`;
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
     return page(
-      name,
+      awake.woke_at ? label(awake.name, disk) : name,
       `<b>Secured:</b> signature verified.<br><br>` +
         `Seal: ${DISKS[disk]}<br>` +
         `Tap: ${tap.counter}<br>` +
@@ -112,7 +119,7 @@ export default {
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
         `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `w.textContent=r.ok?"Name: "+lab(j.state.name):j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("t").textContent=lab(j.state.name);w.textContent=""}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
