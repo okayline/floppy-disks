@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag bounce, fragmentation shown rising
+- The ^ now sweeps right, bounces back left, then goes right again and off the end; a hit counts on any pass. The fragmentation percentage on a free install now rises on its own while the screen is open. Footer version v0.41. Removed: the single one-way sweep and the fragmentation line that stayed at the number it loaded with.
+
 ## Defrag miss
 - A missed Defrag swing now shows no message; the screen just resets. Footer version v0.40. Removed: the "Missed" text.
 
