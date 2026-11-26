@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Layout, dots and buttons
+- The disk is alone at first and the motherboard appears beside it after the first install, with the disk staying put. The dots move slower and the install buttons are much bigger. Removed: the motherboard shown before the first install.
+
 ## Disk and motherboard pictures
 - A woken disk's page shows the disk and the motherboard side by side, with parts listed as installs are made. Placeholders for now. Removed: nothing.
 

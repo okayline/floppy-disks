@@ -66,7 +66,7 @@ export default {
         const s = slots(state, now);
         const total = PAIRS.length;
         if (request.method === "GET") {
-          const parts = installed(s.picks);
+          const parts = s.picks >= 1 ? installed(s.picks) : undefined;
           // No time is given once every pick is made: the player is never told when the end is.
           if (s.done) {
             let st = state;
@@ -172,12 +172,12 @@ export default {
         `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
         `P.textContent="";const row=document.createElement("div"),pa=document.createElement("div"),pm=document.createElement("div");row.style.cssText="display:flex;gap:8px;margin:8px 0";` +
-        `pa.style.cssText=pm.style.cssText="flex:1;border:2px inset #fff;padding:8px;background:#fff;min-height:6em;text-align:center";pa.textContent="[disk image]";pm.append("[motherboard]");` +
-        `(j.parts||[]).forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)});row.append(pa,pm);P.append(row);` +
+        `pa.style.cssText=pm.style.cssText="flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center";pa.style.cssText+=";border:2px inset #fff;background:#fff";pa.textContent="[disk image]";` +
+        `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}row.append(pa,pm);P.append(row);` +
         `if(j.choices){I.append("Install which one?");` +
-        `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
+        `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.3em";` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
-        `I.append(document.createElement("br"),c)})}` +
+        `I.append(c)})}` +
         `else if(j.booted){["Starting disk...","Checking 14 installs... OK","Found "+j.machine,j.name+" is awake."].forEach(x=>{const q=document.createElement("div");q.textContent=x;I.append(q)});document.getElementById("t").textContent=j.name}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
@@ -185,7 +185,7 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         // After the last pick there is no end time to show, so the bar only slides (3 blocks going round) and there is no estimate.
-        `const end=Date.now()+(j.ms_left||0),tick=()=>{k++;d.textContent=".".repeat(k%3+1);if(!j.installing&&k%200==0){show();return}` +
+        `const end=Date.now()+(j.ms_left||0),tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/(j.installing?2:3))%3+1);if(!j.installing&&k%200==0){show();return}` +
         `if(!j.installing){bl.forEach((x,i)=>{x.style.background=(i-k%N+N)%N<3?"#000080":"transparent"});return}` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
