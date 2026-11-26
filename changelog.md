@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Each disk has its own key
+- A disk's page now only opens from a tap signed with that disk's own key. Removed: the shared factory key and the chip list.
+
 ## A disk's page opens once per tap
 - A disk's page now opens only from a fresh tap; a refresh, the back button or an old link says to tap the disk again. Removed: nothing.
 

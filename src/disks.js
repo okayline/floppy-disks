@@ -1,4 +1,4 @@
-// Which chip is which disk: disk number -> the chip's ID (lowercase hex, from the tap). Add one line when a disk is pressed.
+// Which seal is on which disk: disk number -> the hologram seal number. A disk's tag key is made from TAG_SECRET and its seal number. Add one line when a disk is pressed.
 export const DISKS = {
-  1: "04861932271a90", // the pink test disk
+  1: "702500", // the pink test disk
 };
