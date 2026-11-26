@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Install screen
+- After a pick, the page shows what is installing, with a moving bar and a time estimate. Removed: the plain "Next install in" line.
+
 ## Installs
 - A woken disk's page now offers a choice of two to install, one at a time, with the next choice opening after a wait. Removed: the unused step number in a disk's saved state.
 
