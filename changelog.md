@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Privacy panel
+- The Privacy panel on the main page now says more plainly what is and isn't kept, in three short paragraphs. Footer version v0.55. Removed: the two-paragraph Privacy text.
+
 ## Defrag gets harder
 - Each successful Defrag hit makes the next one harder, and a hit shows how much fragmentation it took off. Footer version v0.54. Removed: the same difficulty on every try.
 
