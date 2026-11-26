@@ -2,6 +2,9 @@
 
 Newest first.
 
+## No tap hint on the public page
+- The public page no longer says "Tap the disk with your phone to open it." Removed: that line.
+
 ## Public panel on top
 - A tapper's page now starts with the public panel (with the floppy), then the Disk panel, then the Info panel. Removed: the public panel at the bottom.
 

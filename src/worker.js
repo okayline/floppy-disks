@@ -154,7 +154,7 @@ export default {
     if (!env.TAG_SECRET) return page("Not set up", "This page can't check taps right now.", 500);
     if (!DISKS[disk]) return page("Not that disk", `${name} isn't one of the disks.`, 400);
     // No tap in the link: the public panel only.
-    if (!url.searchParams.get("picc_data") && !url.searchParams.get("cmac")) return publicView(env, disk, "Tap the disk with your phone to open it.");
+    if (!url.searchParams.get("picc_data") && !url.searchParams.get("cmac")) return publicView(env, disk, "");
     const key = await diskKey(env.TAG_SECRET, DISKS[disk]);
     const tap = await checkTap(url.searchParams.get("picc_data") || "", url.searchParams.get("cmac") || "", key).catch(() => ({ ok: false }));
     if (!tap.ok) return publicView(env, disk, `This link didn't come from ${name}'s chip.`, 400);
