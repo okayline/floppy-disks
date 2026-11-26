@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Names have no number yet
+- A woken disk's name now shows as just the word. Removed: the number and dashes after the name.
+
 ## A sleeping disk can be woken
 - A disk's page now has a Wake up button that lets the tapper pick a name from a few choices; a disk wakes once. Removed: nothing.
 

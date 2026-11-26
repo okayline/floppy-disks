@@ -18,12 +18,11 @@ const page = (title, body, status = 200, script = "") =>
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
   );
 
-// The name words a disk can be woken with (generated choices only, nothing typed). The disk number is added when shown, e.g. PINK-DISK-03.
+// The names a disk can be woken with (generated choices only, nothing typed). Shown as they are: no number until the first boot gives the disk its wake number.
 const nameWords = (disk) => {
   const c = COLOURS[disk]?.toUpperCase();
   return c ? [`${c}-DISK`, "FLOPPY", "BOOTDISK", `NEON-${c}`] : null;
 };
-const label = (word, disk) => `${word}-${String(disk).padStart(2, "0")}\u00b7--`; // the wake number comes at the first boot
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -89,7 +88,7 @@ export default {
     const cur = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
     const awake = JSON.parse(cur?.state || "{}");
     // A sleeping disk shows one button; the page's script (tokens stay in page memory) asks for the names and wakes it.
-    const wake = awake.woke_at ? `Name: ${label(awake.name, disk)}` : `<button id="b">Wake up</button>`;
+    const wake = awake.woke_at ? `Name: ${awake.name}` : `<button id="b">Wake up</button>`;
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
@@ -104,13 +103,12 @@ export default {
         `<span id="wake">${wake}</span>`,
       200,
       `<script>window.visit="${visit}";` +
-        `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b"),` +
-        `lab=(x)=>x+"-"+String(n).padStart(2,"0")+"\u00b7--";` +
+        `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
-        `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
+        `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=x;` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `w.textContent=r.ok?"Name: "+lab(j.state.name):j.error};w.append(document.createElement("br"),c)})}</script>`
+        `w.textContent=r.ok?"Name: "+j.state.name:j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
