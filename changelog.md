@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Bigger Wake up button
+- The Wake up button is bigger, centered and sits below the disk, and a sleeping disk's panel is only as tall as it needs to be; it gets its fixed height once it wakes. Footer version v0.46. Removed: the small button above the disk and the fixed height on a sleeping page.
+
 ## Slower fragmentation, slower boot screen
 - Fragmentation now builds up more slowly. The boot screen reads Booting disk, Checking 14 installs, Built (the machine), then the awake line, one by one with animated dots, when you watch the disk finish. Footer version v0.45. Removed: the "Starting disk" and "Found" wording and the boot lines appearing all at once.
 
