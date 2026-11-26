@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Footer and smaller Info text
+- Every page now ends with the shared footer. The Info panel's text is smaller (the Secured line is unchanged). Removed: nothing.
+
 ## Floppy still until the boot, no shadow
 - The floppy faces straight ahead and sits still until the disk has booted, then it turns and can be dragged. Removed: the shadow under it, and the turning while a disk is asleep or building.
 

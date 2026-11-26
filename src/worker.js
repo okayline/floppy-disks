@@ -11,6 +11,8 @@ import { slots, choices, bootAt, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
+const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
+const FOOTER_VERSION = "v0.1";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -21,7 +23,8 @@ const pages = (title, panels, status = 200, script = "") =>
       `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0;padding:8px;box-sizing:border-box">` +
       `<div style="width:min(22em,100%)">` +
       panels.map((x) => `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;word-break:break-all;box-sizing:border-box;margin:12px 0">${x}</div>`).join("") +
-      `</div>${script}`,
+      // The shared footer (dungeon-items' footer.js) draws into the spot under the last panel; data-version is the number it shows.
+      `<div id="ddfoot"></div></div><script src="${FOOTER_URL}" data-version="${FOOTER_VERSION}"></script>${script}`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } }
   );
 const page = (title, body, status = 200) => pages(title, [`<b id="t">${title}</b><p>${body}</p>`], status);
@@ -183,12 +186,12 @@ export default {
         // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
         floppyCss + floppyBox + publicPanel(awake, disk, "", true, tap.counter).html,
         `<p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
-        `<b>Secured:</b> signature verified.<br><br>` +
+        `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
           `Chip ID: ${tap.uid.toUpperCase()}<br>` +
           `Signature: ${sig}<br>` +
-          `Tap fingerprint: ${fingerprint}`,
+          `Tap fingerprint: ${fingerprint}</span>`,
       ],
       200,
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
