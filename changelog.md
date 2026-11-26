@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Main page title
+- The main page's disk panel has a title line above the pink disk. Footer version v0.56. Removed: nothing.
+
 ## Privacy panel
 - The Privacy panel on the main page now says more plainly what is and isn't kept, in three short paragraphs. Footer version v0.55. Removed: the two-paragraph Privacy text.
 

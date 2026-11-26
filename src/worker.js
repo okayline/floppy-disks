@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.55";
+const FOOTER_VERSION = "v0.56";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -184,7 +184,7 @@ export default {
     }
     const m = url.pathname.match(/^\/disk\/(\d{1,3})$/);
     const disk = m ? Number(m[1]) : 0;
-    if (!disk) return pages("88x31 floppy disks", [floppyCss + floppyBox(false), HOW_TO_PLAY, PRIVACY], 200, `<script>${floppyScript(COLOURS[1], false)}</script>`);
+    if (!disk) return pages("88x31 floppy disks", [floppyCss + `<div style="text-align:center;font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif;margin:0 0 6px">~*~88x31~*~ cLuB fLoPPy DiSk</div>` + floppyBox(false), HOW_TO_PLAY, PRIVACY], 200, `<script>${floppyScript(COLOURS[1], false)}</script>`);
     const name = `FLOPPY-${String(disk).padStart(2, "0")}`;
     // Fail closed: without the secret every key would be guessable.
     if (!env.TAG_SECRET) return page("Not set up", "This page can't check taps right now.", 500);
