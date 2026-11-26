@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Free install wording
+- The free installs now read with capital letters, and two of them have their own wording. Footer version v0.58. Removed: the lowercase part names.
+
 ## Free installs name the part
 - A free install now says "Installing" and the part it adds, instead of its own separate name. Footer version v0.57. Removed: the six separate free-install names.
 

@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.57";
+const FOOTER_VERSION = "v0.58";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -140,7 +140,7 @@ export default {
           if (s.open < 1) {
             // The bar running is a free install's, or the last pick's own; both show the fragmentation line, only a free install offers Defrag.
             const last = state.picks[state.picks.length - 1];
-            return json({ parts, picked: s.started, total, installing: s.free || PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 100), frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, can_defrag: !!s.free });
+            return json({ parts, picked: s.started, total, installing: s.free || "Installing " + PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 100), frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, can_defrag: !!s.free });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
           return json({ parts, picked: s.started, total, pair: s.picks + 1, choices: ch.options.map((c) => c.name) });
@@ -248,7 +248,7 @@ export default {
         `(async()=>{const[a,c,d,z]=L;vis(a);if(!await dots(a,"Booting disk"))return;await sl(600);if(my!==BS)return;vis(c);if(!await dots(c,"Checking 14 installs"))return;await sl(600);if(my!==BS)return;c.textContent="Checking 14 installs... OK";await sl(600);if(my!==BS)return;vis(d);await sl(800);if(my!==BS)return;vis(z)})()}`+
         `document.getElementById("pt").textContent="["+j.name+"]";document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
-        `tx.style.fontWeight="700";tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
+        `tx.style.fontWeight="700";tx.append((j.installing||"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
