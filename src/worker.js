@@ -16,12 +16,12 @@ const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new Tex
 // A page is one or more separate panels stacked on the teal background.
 const pages = (title, panels, status = 200, script = "") =>
   new Response(
-    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>` +
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>` +
       `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0;padding:8px;box-sizing:border-box">` +
       `<div style="width:min(22em,100%)">` +
       panels.map((x) => `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;word-break:break-all;box-sizing:border-box;margin:12px 0">${x}</div>`).join("") +
       `</div>${script}`,
-    { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
+    { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } }
   );
 const page = (title, body, status = 200) => pages(title, [`<b id="t">${title}</b><p>${body}</p>`], status);
 
