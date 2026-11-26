@@ -6,7 +6,7 @@
 import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
-import { slots, choices } from "./install.js";
+import { slots, choices, BAR_MS } from "./install.js";
 
 const VISIT_MS = 10 * 60 * 1000;
 const hex = (b) => toHex(new Uint8Array(b));
@@ -67,7 +67,11 @@ export default {
         if (request.method === "GET") {
           // No time is given once every pick is made: the player is never told when the end is.
           if (s.done) return json({ picked: s.picks, total });
-          if (s.open < 1) return json({ picked: s.picks, total, next_unlock_at: s.next_unlock_at });
+          if (s.open < 1) {
+            // The pick being installed is the last one; the bar runs from the slot before the next one to the next one.
+            const last = state.picks[state.picks.length - 1];
+            return json({ picked: s.picks, total, installing: PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: Date.parse(s.next_unlock_at) - now, ms_total: BAR_MS });
+          }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
           return json({ picked: s.picks, total, pair: s.picks + 1, open: s.open, choices: ch.map((c) => c.name) });
         }
@@ -148,12 +152,21 @@ export default {
       `<script>window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
-        `const show=async()=>{const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
+        `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         `if(j.choices){I.append("Install which one?");` +
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(document.createElement("br"),c)})}` +
-        `else if(j.next_unlock_at){const m=Math.max(0,Math.ceil((Date.parse(j.next_unlock_at)-Date.now())/60000));I.textContent="Next install in "+Math.floor(m/60)+"h "+m%60+"m"}` +
+        `else if(j.installing){const end=Date.now()+j.ms_left,N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
+        `tx.append("Installing "+j.installing,d);d.style.cssText="display:inline-block;min-width:3ch";` +
+        `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
+        `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
+        `I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
+        `const tick=()=>{const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
+        `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
+        `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
+        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));` +
+        `d.textContent=".".repeat(k++%3+1)};clearInterval(T);T=setInterval(tick,500);tick()}` +
         `else I.textContent="Copying files..."};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
