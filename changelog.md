@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag takes a fifth
+- A successful Defrag now lowers fragmentation by a fifth instead of back to zero, and the saved-time line is gone. Footer version v0.44. Removed: the reset to zero and the "saved" line.
+
 ## Fixed Disk panel height
 - The Disk panel keeps one height whatever screen it shows. Footer version v0.43. Removed: the panel resizing with its contents.
 

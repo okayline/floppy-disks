@@ -7,7 +7,7 @@ import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
 import { installed } from "./parts.js";
-import { plan, choices, bootAt, machinePlace, fragMs, FRAG_CAP_MS, FRAG_RATE, STEPS, BAR_MS } from "./install.js";
+import { plan, choices, bootAt, machinePlace, fragMs, FRAG_CAP_MS, FRAG_RATE, FRAG_STEP, STEPS, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.43";
+const FOOTER_VERSION = "v0.44";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -83,18 +83,18 @@ export default {
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
       if (sm[2] === "defrag") {
-        // Defrag: only while a free install runs. It takes the built-up fragmentation (at most what is left of the schedule) off the bar and starts it again from zero.
+        // Defrag: only while a free install runs. It takes a fifth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
         if (request.method !== "POST") return json({ error: "POST only" }, 405);
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         const now = Date.now();
         const s = plan(state, now);
         if (!s.free) return json({ error: "Nothing to defragment right now" }, 409);
-        const saved = Math.floor(Math.min(fragMs(state, now), s.end - now));
+        const frag = fragMs(state, now), saved = Math.floor(Math.min(frag, FRAG_STEP * FRAG_CAP_MS, s.end - now));
         if (saved < 1000) return json({ error: "Nothing to defragment yet" }, 409);
         const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
         // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
-          .bind(JSON.stringify({ ...state, picks, defrag_at: new Date(now).toISOString() }), row.disk, d.state).run();
+          .bind(JSON.stringify({ ...state, picks, defrag_at: new Date(Math.round(now - (frag - saved) / FRAG_RATE)).toISOString() }), row.disk, d.state).run();
         if (!done.meta.changes) return json({ error: "Try again" }, 409);
         return json({ saved_ms: saved });
       }
@@ -237,7 +237,7 @@ export default {
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=12,ZL=45+Math.random()*35,SWEEP=1800;const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
-        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"Defragmenting... "+hms(k.saved_ms)+" saved":k.error;show()};` +
+        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"":k.error;show()};` +
         `db.onclick=()=>{if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
         `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
         `tr.style.cssText="position:relative;height:22px;background:#d9b8f0;border:2px inset #fff;margin:12px 0 26px";` +
