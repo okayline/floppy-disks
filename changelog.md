@@ -2,6 +2,9 @@
 
 Newest first.
 
+## The boot
+- After the last wait, the disk boots: a short start-up screen, a machine, and a number added to its name. Removed: nothing.
+
 ## Install screen
 - After a pick, the page shows what is installing, with a moving bar and a time estimate, and the last wait has a moving bar too. Removed: the plain "Next install in" line.
 
