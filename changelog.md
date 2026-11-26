@@ -2,6 +2,9 @@
 
 Newest first.
 
+## How to play
+- Every disk page now has a short "How to play" panel, on the public page and on the tapped page (under the Disk panel). Footer version v0.51. Removed: nothing.
+
 ## New look
 - The pages have a fresher look: a bright teal background, rounded Windows-grey panels, rounded buttons, and the disk name in brackets. The loading bar and the Defrag colours are unchanged. Footer version v0.50. Removed: the flat teal background, the square beveled panels and the plain buttons.
 

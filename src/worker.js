@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.50";
+const FOOTER_VERSION = "v0.51";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -56,12 +56,15 @@ const publicPanel = (st, disk, note, live, taps) => {
   };
 };
 
+// The How to play panel, shown on every disk page (the public page and the tapped page). Plain text; "1 hour" is the real bar length (BAR_MS is 1 minute while testing).
+const HOW_TO_PLAY = `<b style="font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How to play</b><p style="margin:10px 0 0;font-size:14px;line-height:1.6">Tap your floppy disk with your phone to open its page. Press Wake up and choose a name for your disk. Then it installs itself, and each install takes 1 hour. Come back and tap again whenever you like. Some installs ask you to pick one of two options, and some start on their own. During the self-starting ones you can play Defrag: press the button when the moving marker is in the zone to make the wait shorter. After 14 installs the disk boots and shows what kind of PC it built.</p>`;
+
 // The public page: reads only, writes nothing.
 const publicView = async (env, disk, note, status = 200) => {
   const row = await env.DB.prepare("SELECT state, last_tap FROM disks WHERE disk = ?1").bind(disk).first();
   const p = publicPanel(JSON.parse(row?.state || "{}"), disk, note, false, row?.last_tap);
   const st = JSON.parse(row?.state || "{}");
-  return pages(p.heading, [floppyCss + floppyBox(false) + p.html], status, `<script>${floppyScript(COLOURS[disk], !!st.booted_at)}</script>`);
+  return pages(p.heading, [floppyCss + floppyBox(false) + p.html, HOW_TO_PLAY], status, `<script>${floppyScript(COLOURS[disk], !!st.booted_at)}</script>`);
 };
 
 const json = (obj, status = 200) =>
@@ -211,6 +214,7 @@ export default {
         publicPanel(awake, disk, "", true, tap.counter).html,
         // The Disk panel (sized to its contents; the page's fit() keeps each kind of screen at the tallest it has been, so the panel does not wobble with small text changes; the floppy is centered over the Wake up button while asleep): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
         `<div id="W">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
+        HOW_TO_PLAY,
         `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em;color:#222">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
