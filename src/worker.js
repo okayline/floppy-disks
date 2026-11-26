@@ -157,17 +157,19 @@ export default {
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(document.createElement("br"),c)})}` +
-        `else if(j.installing){const end=Date.now()+j.ms_left,N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
-        `tx.append("Installing "+j.installing,d);d.style.cssText="display:inline-block;min-width:3ch";` +
+        `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
+        `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
-        `const tick=()=>{const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
+        // After the last pick there is no end time to show, so the bar only slides (3 blocks going round) and there is no estimate.
+        `const end=Date.now()+(j.ms_left||0),tick=()=>{k++;d.textContent=".".repeat(k%3+1);` +
+        `if(!j.installing){bl.forEach((x,i)=>{x.style.background=(i-k%N+N)%N<3?"#000080":"transparent"});return}` +
+        `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
-        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));` +
-        `d.textContent=".".repeat(k++%3+1)};clearInterval(T);T=setInterval(tick,500);tick()}` +
-        `else I.textContent="Copying files..."};` +
+        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"))};` +
+        `T=setInterval(tick,j.installing?500:300);tick()}};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
