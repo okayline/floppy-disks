@@ -89,7 +89,7 @@ export default {
             return json({ picked: s.picks, total, installing: PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: Date.parse(s.next_unlock_at) - now, ms_total: BAR_MS });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
-          return json({ picked: s.picks, total, pair: s.picks + 1, open: s.open, choices: ch.map((c) => c.name) });
+          return json({ picked: s.picks, total, pair: s.picks + 1, choices: ch.map((c) => c.name) });
         }
         if (request.method !== "POST") return json({ error: "GET or POST only" }, 405);
         const body = await request.json().catch(() => ({}));
@@ -99,7 +99,6 @@ export default {
         const at = new Date(now).toISOString();
         const next = {
           ...state,
-          first_pick_at: state.first_pick_at || at,
           picks: [...(state.picks || []), { pair: body.pair, side: picked.side, at }],
           history: [...(state.history || []), { event: "install", pair: body.pair, side: picked.side, at }],
         };
@@ -121,7 +120,7 @@ export default {
       const body = await request.json().catch(() => ({}));
       if (!words.includes(body.name)) return json({ error: "Pick one of the names" }, 400);
       const at = new Date().toISOString();
-      const woke = { name: body.name, woke_at: at, picks: [], first_pick_at: null, history: [{ event: "wake", at }] };
+      const woke = { name: body.name, woke_at: at, picks: [], history: [{ event: "wake", at }] };
       // Only a sleeping disk wakes, and only once: the statement fails if woke_at is already there.
       const saved = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND json_extract(state, '$.woke_at') IS NULL")
         .bind(JSON.stringify(woke), row.disk).run();

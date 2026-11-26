@@ -2,6 +2,9 @@
 
 Newest first.
 
+## The bar restarts at every pick
+- Each wait now starts at the moment of the pick, so every install shows a full wait. Removed: the shared clock from the first pick, and installs stacking up.
+
 ## The boot
 - After the last wait, the disk boots: a short start-up screen, a machine, and a number added to its name. Removed: nothing.
 
