@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.34";
+const FOOTER_VERSION = "v0.35";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -25,7 +25,7 @@ const pages = (title, panels, status = 200, script = "") =>
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>` +
       `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0;padding:8px;box-sizing:border-box">` +
       `<div style="width:min(22em,100%)">` +
-      panels.map((x) => `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;word-break:break-all;box-sizing:border-box;margin:12px 0">${x}</div>`).join("") +
+      panels.map((x) => `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;overflow-wrap:anywhere;box-sizing:border-box;margin:12px 0">${x}</div>`).join("") +
       // The shared footer (dungeon-items' footer.js) draws into the spot under the last panel; data-version is the number it shows.
       `<div id="ddfoot"></div></div><script src="${FOOTER_URL}" data-version="${FOOTER_VERSION}"></script>${script}`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } }
@@ -214,7 +214,7 @@ export default {
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
-        `I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
+        `e.style.cssText="font-size:.8em";I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +

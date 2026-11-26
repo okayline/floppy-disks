@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Lines break at words, smaller time-left line
+- Text now wraps between words instead of between letters (a long code with no spaces still wraps). The "Estimated time remaining" line is a little smaller. Footer version v0.35. Removed: the break-anywhere rule.
+
 ## Floppy in the disk picture box
 - On a tapper's page the floppy now sits in the disk picture's box in the Disk panel, with the parts list beside it in much smaller text; the install buttons' text is a little smaller. The public page keeps its floppy at the top. Footer version v0.34. Removed: the floppy at the top of the tapper page and the "[disk image]" placeholder.
 
