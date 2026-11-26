@@ -24,7 +24,7 @@ export const QUESTIONS = QSTEP.length;
 // (20 minutes of 60), reached after ten bars (10 hours). A successful press takes a twentieth of the cap (what is built up, if less) off the running bar (1 minute at the real pace, 1 second at the 1-minute test pace; it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
 export const FRAG_RATE = 0.1 / 3;
 export const FRAG_CAP_MS = BAR_MS / 3;
-// One successful Defrag takes this fraction of the cap off (not everything).
+// One successful Defrag takes this fraction of the cap off (not everything), the same every time.
 export const FRAG_STEP = 0.05;
 export const fragMs = (state, now) => Math.min(FRAG_CAP_MS, Math.max(0, (now - Date.parse(state.defrag_at || state.picks[0].at)) * FRAG_RATE));
 

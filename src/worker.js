@@ -261,7 +261,7 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation in the reserved space): the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)).toFixed(1)+"%"};if(!j.can_defrag)I.append(fl);else{` +
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now();let SH=j.frag,NX=L0+400+Math.random()*2100;FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+(t-L0)*(j.frag_rate||0));NX=t+400+Math.random()*2100}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%"};if(!j.can_defrag)I.append(fl);else{` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=Math.max(4,12-1.5*HITS),ZL=45+Math.random()*35,SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
@@ -277,7 +277,7 @@ export default {
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show(true);return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
-        `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
+        `const s=Math.max(0,Math.ceil(l/1000)-1),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
         `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));fit(j.can_defrag?"f":"i")};` +
         `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}fit(j.choices?"q":j.booted?"b":j.can_defrag?"f":"i")};` +
         `if(!b)show();` +
