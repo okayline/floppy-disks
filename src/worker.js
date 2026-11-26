@@ -264,13 +264,15 @@ export default {
         `let t0=0;const ZW=Math.max(4,12-1.5*HITS),ZL=45+Math.random()*35,SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
         `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok)HITS++;NOTE=q.ok?"-"+k.saved_pct.toFixed(1)+"% fragmentation":k.error;show()};` +
-        `db.onclick=()=>{if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
+        `const go=()=>{if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
         `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
         `tr.style.cssText="position:relative;height:22px;background:#d9b8f0;border:2px inset #fff;margin:12px 0 26px";` +
         `zn.style.cssText="position:absolute;top:0;bottom:0;background:#fff3a0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
         `cr.style.cssText="position:absolute;top:100%;margin:3px 0 0 -8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #000";` +
         `tr.append(zn,cr);mt.append(tr);db.textContent="Stop";t0=Date.now();` +
-        `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,mt,db)}}` +
+        `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};` +
+        // Defrag and Stop react when the finger goes down, not when it lifts (a touch's click comes after the lift, so the arrow had moved on). A click with detail 0 is the keyboard (Enter or Space); touch and mouse clicks come after the press and are ignored.
+        `db.onpointerdown=(e)=>{if(e.button===0)go()};db.onclick=(e)=>{if(!e||e.detail===0)go()};I.append(fl,mt,db)}}` +
         `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show(true);return}` +
