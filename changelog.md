@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Names show the disk number
+- A woken disk's name now ends with its disk number. Removed: nothing.
+
 ## Names have no number yet
 - A woken disk's name now shows as just the word. Removed: the number and dashes after the name.
 
