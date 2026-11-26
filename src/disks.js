@@ -6,3 +6,12 @@ export const DISKS = {
   4: "702492", // green
   5: "702494", // blue
 };
+
+// Each disk's colour, as recorded at pressing (the pressings sheet). A disk's colour name, like PINK-DISK, is always offered when it wakes.
+export const COLOURS = {
+  1: "pink",
+  2: "purple",
+  3: "orange",
+  4: "green",
+  5: "blue",
+};

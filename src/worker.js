@@ -4,7 +4,7 @@
 // Each disk's tag has its own key: the first 16 bytes of SHA-256("<TAG_SECRET>-k2-<seal number>"), set on the tag with NFC.cool Tools.
 // A tap that checks out under a disk's key can only have come from that disk's tag, so a link edited to another disk's number is refused.
 import { checkTap, toHex } from "./sun.js";
-import { DISKS } from "./disks.js";
+import { DISKS, COLOURS } from "./disks.js";
 
 const VISIT_MS = 10 * 60 * 1000;
 const hex = (b) => toHex(new Uint8Array(b));
@@ -18,6 +18,13 @@ const page = (title, body, status = 200, script = "") =>
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
   );
 
+// The name words a disk can be woken with (generated choices only, nothing typed). The disk number is added when shown, e.g. PINK-DISK-03.
+const nameWords = (disk) => {
+  const c = COLOURS[disk]?.toUpperCase();
+  return c ? [`${c}-DISK`, "FLOPPY", "BOOTDISK", `NEON-${c}`] : null;
+};
+const label = (word, disk) => `${word}-${String(disk).padStart(2, "0")}\u00b7--`; // the wake number comes at the first boot
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
@@ -29,7 +36,7 @@ async function diskKey(secret, seal) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const sm = url.pathname.match(/^\/disk\/(\d{1,3})\/state$/);
+    const sm = url.pathname.match(/^\/disk\/(\d{1,3})\/(state|names|wake)$/);
     if (sm) {
       // The visit token (header x-visit) must be live and belong to this disk. It proves a good tap opened this visit.
       const token = request.headers.get("x-visit") || "";
@@ -38,7 +45,26 @@ export default {
         : null;
       if (!row || row.disk !== Number(sm[1])) return json({ error: "Tap the disk again" }, 403);
       const d = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first();
-      return json({ disk: row.disk, state: JSON.parse(d?.state || "{}") });
+      const state = JSON.parse(d?.state || "{}");
+      if (sm[2] === "state") return json({ disk: row.disk, state });
+      const words = nameWords(row.disk);
+      if (!words) return json({ error: "Not set up" }, 500);
+      if (sm[2] === "names") {
+        if (state.woke_at) return json({ error: "Already awake" }, 409);
+        // The disk's colour name, plus two of the others in random order.
+        const rest = words.slice(1).sort(() => crypto.getRandomValues(new Uint8Array(1))[0] - 128).slice(0, 2);
+        return json({ names: [words[0], ...rest] });
+      }
+      if (request.method !== "POST") return json({ error: "POST only" }, 405);
+      const body = await request.json().catch(() => ({}));
+      if (!words.includes(body.name)) return json({ error: "Pick one of the names" }, 400);
+      const at = new Date().toISOString();
+      const woke = { name: body.name, woke_at: at, step: 1, history: [{ event: "wake", at }] };
+      // Only a sleeping disk wakes, and only once: the statement fails if woke_at is already there.
+      const saved = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND json_extract(state, '$.woke_at') IS NULL")
+        .bind(JSON.stringify(woke), row.disk).run();
+      if (!saved.meta.changes) return json({ error: "Already awake" }, 409);
+      return json({ disk: row.disk, state: woke });
     }
     const m = url.pathname.match(/^\/disk\/(\d{1,3})$/);
     const disk = m ? Number(m[1]) : 0;
@@ -60,6 +86,10 @@ export default {
     const visit = hex(crypto.getRandomValues(new Uint8Array(16)));
     await env.DB.prepare("DELETE FROM visits WHERE expires < ?1").bind(Date.now()).run();
     await env.DB.prepare("INSERT INTO visits (token_hash, disk, expires) VALUES (?1, ?2, ?3)").bind(await sha256(visit), disk, Date.now() + VISIT_MS).run();
+    const cur = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
+    const awake = JSON.parse(cur?.state || "{}");
+    // A sleeping disk shows one button; the page's script (tokens stay in page memory) asks for the names and wakes it.
+    const wake = awake.woke_at ? `Name: ${label(awake.name, disk)}` : `<button id="b">Wake up</button>`;
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
@@ -70,9 +100,17 @@ export default {
         `Tap: ${tap.counter}<br>` +
         `Chip ID: ${tap.uid.toUpperCase()}<br>` +
         `Signature: ${sig}<br>` +
-        `Tap fingerprint: ${fingerprint}`,
+        `Tap fingerprint: ${fingerprint}<br><br>` +
+        `<span id="wake">${wake}</span>`,
       200,
-      `<script>window.visit="${visit}"</script>`
+      `<script>window.visit="${visit}";` +
+        `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b"),` +
+        `lab=(x)=>x+"-"+String(n).padStart(2,"0")+"\u00b7--";` +
+        `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
+        `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
+        `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
+        `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
+        `w.textContent=r.ok?"Name: "+lab(j.state.name):j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };

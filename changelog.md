@@ -2,6 +2,9 @@
 
 Newest first.
 
+## A sleeping disk can be woken
+- A disk's page now has a Wake up button that lets the tapper pick a name from a few choices; a disk wakes once. Removed: nothing.
+
 ## Game state has a database, and a tap opens a visit
 - The Worker now keeps each disk's last tap number and its game state in a database instead of KV, and a good tap opens a short visit the page can use for follow-up requests. Removed: the KV store for tap numbers.
 
