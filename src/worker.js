@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.51";
+const FOOTER_VERSION = "v0.52";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -56,8 +56,11 @@ const publicPanel = (st, disk, note, live, taps) => {
   };
 };
 
-// The How to play panel, shown on every disk page (the public page and the tapped page). Plain text, kura's wording.
+// The How to play panel, shown on the public page only (the tapped page has How it works instead). Plain text, kura's wording.
 const HOW_TO_PLAY = `<b style="font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How to play</b><ol style="margin:10px 0 0;padding-left:1.4em;font-size:14px;line-height:1.7"><li>Get a disk!</li><li>Tap it with your phone</li><li>Wake it up</li><li>Choose what to install</li><li>Defrag!</li></ol><p style="margin:10px 0 0;font-size:14px;line-height:1.6">After installing all the components, find out which PC you built 🖥️</p>`;
+
+// The How it works panel, the last panel on the tapped page only. A closed <details> (a lot of text), no script. Agreed wording; it makes privacy claims, so keep it true when the tap check or the storage changes.
+const HOW_IT_WORKS = `<details><summary style="cursor:pointer;font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How it works</summary><p style="margin:10px 0 0;font-size:14px;line-height:1.6">Each disk has an NFC tag (an NTAG 424 DNA chip). Every tap, it writes a fresh link carrying an encrypted block (the chip's ID and a tap counter) and a signature made with a key only that disk's tag and our server have. The server checks the signature, so a link edited to another disk's number is refused.</p><p style="margin:10px 0 0;font-size:14px;line-height:1.6">You tap to open the page every time. A link works once: the server refuses any tap it has already seen, so a copied, bookmarked or reloaded link won't work. A good tap opens a 10-minute window for your page to talk to the server. To prove the tap was real, the server gives your page a random token. Your page keeps it only while it's open, and the server saves just a fingerprint of it.</p><p style="margin:10px 0 0;font-size:14px;line-height:1.6">We store nothing on your phone: no cookies, no local storage, no accounts. The server keeps the last tap number per disk, the disk's progress (its name, when it woke, its picks and when they happened), and the fingerprinted tokens, which stop working after 10 minutes and are cleared on the next tap. The page shows the tap's disk, tap number, chip ID and signature, but the chip ID isn't saved.</p></details>`;
 
 // The public page: reads only, writes nothing.
 const publicView = async (env, disk, note, status = 200) => {
@@ -214,13 +217,13 @@ export default {
         publicPanel(awake, disk, "", true, tap.counter).html,
         // The Disk panel (sized to its contents; the page's fit() keeps each kind of screen at the tallest it has been, so the panel does not wobble with small text changes; the floppy is centered over the Wake up button while asleep): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
         `<div id="W">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
-        HOW_TO_PLAY,
         `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em;color:#222">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
           `Chip ID: ${tap.uid.toUpperCase()}<br>` +
           `Signature: ${sig}<br>` +
           `Tap fingerprint: ${fingerprint}</span>`,
+        HOW_IT_WORKS,
       ],
       200,
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +

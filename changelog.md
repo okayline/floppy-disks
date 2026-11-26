@@ -2,6 +2,9 @@
 
 Newest first.
 
+## How it works
+- The tapped page has a closed, collapsible "How it works" panel at the bottom, and no longer shows How to play (the public page still does). Footer version v0.52. Removed: How to play from the tapped page.
+
 ## How to play
 - Every disk page now has a short "How to play" panel, on the public page and on the tapped page (under the Disk panel). Footer version v0.51. Removed: nothing.
 
