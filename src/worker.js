@@ -57,7 +57,7 @@ const publicPanel = (st, disk, note, live, taps) => {
 };
 
 // The How to play panel, shown on every disk page (the public page and the tapped page). Plain text, kura's wording.
-const HOW_TO_PLAY = `<b style="font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How to play</b><ol style="margin:10px 0 0;padding-left:1.4em;font-size:14px;line-height:1.7"><li>Get a disk!</li><li>Tap it with your phone</li><li>Wake it up</li><li>Choose what to install</li><li>Defrag!</li></ol><p style="margin:10px 0 0;font-size:14px;line-height:1.6">After installing all the components, find out which PC you built!</p>`;
+const HOW_TO_PLAY = `<b style="font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How to play</b><ol style="margin:10px 0 0;padding-left:1.4em;font-size:14px;line-height:1.7"><li>Get a disk!</li><li>Tap it with your phone</li><li>Wake it up</li><li>Choose what to install</li><li>Defrag!</li></ol><p style="margin:10px 0 0;font-size:14px;line-height:1.6">After installing all the components, find out which PC you built 🖥️</p>`;
 
 // The public page: reads only, writes nothing.
 const publicView = async (env, disk, note, status = 200) => {
