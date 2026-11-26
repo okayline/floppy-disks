@@ -14,9 +14,9 @@ const VISIT_MS = 10 * 60 * 1000;
 const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
-const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0";
+const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.49";
+const FOOTER_VERSION = "v0.50";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -24,9 +24,12 @@ const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new Tex
 const pages = (title, panels, status = 200, script = "") =>
   new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${title}</title>` +
-      `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0;padding:8px;box-sizing:border-box">` +
-      `<div style="width:min(22em,100%)">` +
-      panels.map((x) => `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;overflow-wrap:anywhere;box-sizing:border-box;margin:12px 0">${x}</div>`).join("") +
+      `<body style="font:18px ui-monospace,'SF Mono',Menlo,Consolas,monospace;background:#0f9a96;color:#000;display:grid;place-items:center;min-height:100vh;margin:0;padding:8px;box-sizing:border-box;overflow-x:hidden">` +
+      `<style>button{font:inherit;border:1px solid #808080;border-radius:12px;background:#f2f2f2;color:#000;cursor:pointer}</style>` +
+      // Two soft colour shapes behind the panels (decoration only).
+      `<div aria-hidden="true" style="position:fixed;left:-70px;top:150px;width:260px;height:260px;border-radius:50%;background:#ffb0d5;opacity:.32;filter:blur(60px);pointer-events:none"></div><div aria-hidden="true" style="position:fixed;right:-80px;top:520px;width:280px;height:280px;border-radius:50%;background:#9ff3e8;opacity:.28;filter:blur(70px);pointer-events:none"></div>` +
+      `<div style="position:relative;width:min(22em,100%)">` +
+      panels.map((x) => `<div style="background:#c0c0c0;padding:20px;border:1px solid rgba(255,255,255,.75);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.2);overflow-wrap:anywhere;box-sizing:border-box;margin:14px 0">${x}</div>`).join("") +
       // The shared footer (dungeon-items' footer.js) draws into the spot under the last panel; data-version is the number it shows.
       `<div id="ddfoot"></div></div><script src="${FOOTER_URL}" data-version="${FOOTER_VERSION}"></script>${script}`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } }
@@ -49,7 +52,7 @@ const publicPanel = (st, disk, note, live, taps) => {
   const state = st.booted_at ? "built" : st.woke_at ? "building" : "asleep";
   return {
     heading,
-    html: `<b id="${live ? "pt" : "t"}">${heading}</b><p>88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Taps: ${taps || 0}<br>Status: <span id="${live ? "status" : "st"}">${state}</span></p>${note ? `<p>${note}</p>` : ""}`,
+    html: `<b id="${live ? "pt" : "t"}" style="display:block;font:700 28px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:-.01em;margin-bottom:10px">[${heading}]</b><p style="margin:0;font-size:14px;line-height:1.75">88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Taps: ${taps || 0}<br>Status: <span id="${live ? "status" : "st"}" style="display:inline-block;background:#e8e8e8;border:1px solid #808080;border-radius:999px;padding:0 12px">${state}</span></p>${note ? `<p style="font-size:14px">${note}</p>` : ""}`,
   };
 };
 
@@ -207,8 +210,8 @@ export default {
         // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
         publicPanel(awake, disk, "", true, tap.counter).html,
         // The Disk panel (sized to its contents; the page's fit() keeps each kind of screen at the tallest it has been, so the panel does not wobble with small text changes; the floppy is centered over the Wake up button while asleep): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
-        `<div id="W">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
-        `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em">` +
+        `<div id="W">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
+        `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em;color:#222">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
           `Chip ID: ${tap.uid.toUpperCase()}<br>` +
@@ -222,7 +225,7 @@ export default {
         `let T,SW=0,NOTE="",BS=0;const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async(live)=>{clearInterval(T);clearInterval(SW);SW=0;const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
         `const pm=document.getElementById("pm");pm.textContent="";pm.style.cssText="${PM_STYLE}";` +
-        `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
+        `if(j.parts){pm.style.cssText+=";background:#fff;border-radius:12px";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
         `if(j.choices){I.append("Install which one?");` +
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
@@ -233,9 +236,9 @@ export default {
         // All four lines are put in hidden first (so the panel is already its final height) and revealed one by one.
         `const L=["Booting disk...","Checking 14 installs... OK","Built "+j.machine,j.name+" is awake."].map(t=>{const q=mkl(t);q.style.visibility="hidden";return q}),vis=(q)=>{q.style.visibility="visible"};`+
         `(async()=>{const[a,c,d,z]=L;vis(a);if(!await dots(a,"Booting disk"))return;await sl(600);if(my!==BS)return;vis(c);if(!await dots(c,"Checking 14 installs"))return;await sl(600);if(my!==BS)return;c.textContent="Checking 14 installs... OK";await sl(600);if(my!==BS)return;vis(d);await sl(800);if(my!==BS)return;vis(z)})()}`+
-        `document.getElementById("pt").textContent=j.name;document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
+        `document.getElementById("pt").textContent="["+j.name+"]";document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
-        `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
+        `tx.style.fontWeight="700";tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
@@ -264,7 +267,7 @@ export default {
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
         `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);c.style.cssText="font:inherit;font-size:1.2em;padding:10px 20px;margin:6px 0";` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `if(r.ok){document.getElementById("fb").style.cssText="${FB_STYLE}";document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("fb").style.cssText="${FB_STYLE}";document.getElementById("pt").textContent="["+lab(j.state.name)+"]";document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
