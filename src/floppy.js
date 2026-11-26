@@ -131,4 +131,5 @@ function client(colour, live) {
   if (live) window.floppyLive();
 }
 
-export const floppyScript = (colour, live) => `(${client.toString()})(${JSON.stringify(colour)},${live ? "true" : "false"});`;
+// Wrangler's bundler wraps named functions in a helper called __name; sent to the page as text it would be missing and the drawing would stop, so the page gets a stand-in.
+export const floppyScript = (colour, live) => `var __name=(t)=>t;(${client.toString()})(${JSON.stringify(colour)},${live ? "true" : "false"});`;

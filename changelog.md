@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Floppy shows up on the live site
+- The floppy didn't draw on the live site (only its shadow showed); the page now carries what the site's bundler assumes. Removed: nothing.
+
 ## No tap hint on the public page
 - The public page no longer says "Tap the disk with your phone to open it." Removed: that line.
 
