@@ -7,10 +7,10 @@ export const BAR_MS = 60 * 1000; // one bar. 1 MINUTE FOR TESTING: the real valu
 // The 14 steps in order: q = a question (pick 1 of 2), f = a free install. A question's bar starts at its pick; a free install's bar starts when the step before it ends.
 export const STEPS = "qfqfqfqqfqfqfq";
 // What the screen says while a free install runs, by step number: the part that step adds (see parts.js), most of them "Installing <part>".
-export const FREE_LINE = { 2: "Installing Power Supply", 4: "Installing RAM", 6: "Installing Floppy Drive", 9: "Installing CD-ROM", 11: "Installing and testing out Speakers", 13: "Backwards-engineering custom drivers for Keyboard Cable" };
+export const FREE_LINE = { 2: "Installing Power Supply", 4: "Installing Keyboard Cable", 6: "Installing CD-ROM", 9: "Installing CPU", 11: "Installing and testing out Speakers", 13: "Backwards-engineering custom drivers for Keyboard Cable" };
 // Which questions (counting only questions, from 1) decide the machine. Each one is a bit, game = 1, the first the biggest: 4 of them give 16 endings (places 0 to 15).
 // The other questions only decide what the disk has installed.
-export const WEIGHTED = [1, 3, 5, 7];
+export const WEIGHTED = [1, 2, 3, 4];
 
 const QSTEP = []; // step number (from 1) of question n+1
 const FREE_AFTER = []; // free installs right after question n+1, before the next question

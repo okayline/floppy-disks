@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Parts in a new order
+- The parts now go in a different order, starting with the floppy drive. Footer version v0.60. Removed: the old order.
+
 ## Part names capitalized
 - The part names on the motherboard now start with capital letters, to match the free installs. Footer version v0.59. Removed: the lowercase part names.
 

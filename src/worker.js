@@ -6,7 +6,7 @@
 import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
-import { installed } from "./parts.js";
+import { installed, PARTS } from "./parts.js";
 import { plan, choices, bootAt, machinePlace, fragMs, FRAG_CAP_MS, FRAG_RATE, FRAG_STEP, STEPS, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.59";
+const FOOTER_VERSION = "v0.60";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -233,9 +233,9 @@ export default {
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b"),W=document.getElementById("W"),HW={},fit=(k)=>{if(!W||!W.offsetHeight)return;W.style.minHeight="0";HW[k]=Math.max(HW[k]||0,W.offsetHeight);W.style.minHeight=HW[k]+"px"};` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
         `let T,SW=0,NOTE="",BS=0,HITS=0;const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async(live)=>{clearInterval(T);clearInterval(SW);SW=0;const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
-        // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
+        // The disk and the floppy drive side by side (placeholders): the floppy drive picture stays and the parts installed so far are listed on it.
         `const pm=document.getElementById("pm");pm.textContent="";pm.style.cssText="${PM_STYLE}";` +
-        `if(j.parts){pm.style.cssText+=";background:#fff;border-radius:12px";pm.append("[Motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
+        `if(j.parts){pm.style.cssText+=";background:#fff;border-radius:12px";pm.append(${JSON.stringify("["+PARTS[0]+"]")});j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
         `if(j.choices){I.append("Install which one?");` +
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
