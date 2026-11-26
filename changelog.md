@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Main page
+- The main page (no disk) now shows the pink disk picture, then the How to play panel, then a Privacy panel. Footer version v0.53. Removed: the "Tap a disk with your phone" line and its plain panel.
+
 ## How it works
 - The tapped page has a closed, collapsible "How it works" panel at the bottom, and no longer shows How to play (the public page still does). Footer version v0.52. Removed: How to play from the tapped page.
 
