@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Disk centered over Wake up, bigger names, tighter panel
+- On a sleeping disk the picture is centered over the Wake up button, the name choices have bigger text, and the awake Disk panel is a little shorter so there is less empty space at the bottom. Footer version v0.47. Removed: the empty motherboard box beside a sleeping disk and the taller panel.
+
 ## Bigger Wake up button
 - The Wake up button is bigger, centered and sits below the disk, and a sleeping disk's panel is only as tall as it needs to be; it gets its fixed height once it wakes. Footer version v0.46. Removed: the small button above the disk and the fixed height on a sleeping page.
 

@@ -14,8 +14,10 @@ const VISIT_MS = 10 * 60 * 1000;
 const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
+const DISK_FIXED = "height:410px;overflow:auto"; // the Disk panel's content height once awake (tallest state measured about 360 to 390)
+const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.46";
+const FOOTER_VERSION = "v0.47";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -205,8 +207,8 @@ export default {
       [
         // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
         publicPanel(awake, disk, "", true, tap.counter).html,
-        // The Disk panel (a fixed height, 460px of content, so it does not change size as the screens change; measured at 390px wide, tallest state about 430): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
-        `<div id="W" style="${awake.woke_at ? "height:460px;overflow:auto" : ""}">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div style="flex:1;box-sizing:border-box;min-width:0">${floppyBox(true)}</div><div id="pm" style="${PM_STYLE}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
+        // The Disk panel (awake: a fixed height, DISK_FIXED, so it does not change size as the screens change; asleep: only as tall as its contents and the floppy centered over the Wake up button): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
+        `<div id="W" style="${awake.woke_at ? DISK_FIXED : ""}">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
         `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
@@ -259,9 +261,9 @@ export default {
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
-        `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
+        `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);c.style.cssText="font:inherit;font-size:1.2em;padding:10px 20px;margin:6px 0";` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `if(r.ok){document.getElementById("W").style.cssText="height:460px;overflow:auto";document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("W").style.cssText="${DISK_FIXED}";document.getElementById("fb").style.cssText="${FB_STYLE}";document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
