@@ -2,6 +2,9 @@
 
 Newest first.
 
+## 8 questions, 6 free installs
+- The build is still 14 steps, but only 8 are questions; the other 6 install by themselves. A disk's questions are drawn from the pool and differ from disk to disk. The machine now comes from some of the answers, not a count. Footer version v0.36. Removed: the 14 fixed questions and the count that picked the machine.
+
 ## Lines break at words, smaller time-left line
 - Text now wraps between words instead of between letters (a long code with no spaces still wraps). The "Estimated time remaining" line is a little smaller. Footer version v0.35. Removed: the break-anywhere rule.
 

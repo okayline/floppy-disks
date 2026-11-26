@@ -7,7 +7,7 @@ import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
 import { installed } from "./parts.js";
-import { slots, choices, bootAt, BAR_MS } from "./install.js";
+import { plan, choices, bootAt, machinePlace, STEPS, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.35";
+const FOOTER_VERSION = "v0.36";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -86,46 +86,47 @@ export default {
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         if (!env.TAG_SECRET) return json({ error: "Not set up" }, 500);
         const now = Date.now();
-        const s = slots(state, now);
-        const total = PAIRS.length;
+        const s = plan(state, now);
+        const total = STEPS.length;
         if (request.method === "GET") {
-          const parts = s.picks >= 1 ? installed(s.picks) : undefined;
+          const parts = s.started >= 1 ? installed(s.started) : undefined;
           if (s.done) {
             let st = state;
             if (!st.booted_at && now >= bootAt(st)) {
-              // The boot: the machine is picked by how many games are among the picks. The wake number is the next free one across all disks.
+              // The boot: the machine is picked by the weighted questions' answers. The wake number is the next free one across all disks.
               // One statement does the numbering and the save, and only for a disk that has not booted, so two requests can't boot it twice or take the same number.
-              const games = st.picks.filter((p) => p.side === "game").length;
+              const place = machinePlace(st.picks);
               const at = new Date(now).toISOString();
-              const booted = { ...st, booted_at: at, machine: games, history: [...(st.history || []), { event: "boot", machine: games, at }] };
+              const booted = { ...st, booted_at: at, machine: place, history: [...(st.history || []), { event: "boot", machine: place, at }] };
               await env.DB.prepare(
                 "UPDATE disks SET state = json_set(?1, '$.wake_no', (SELECT COALESCE(MAX(json_extract(state, '$.wake_no')), 0) + 1 FROM disks)) WHERE disk = ?2 AND json_extract(state, '$.booted_at') IS NULL"
               ).bind(JSON.stringify(booted), row.disk).run();
               st = JSON.parse((await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first()).state);
             }
             // The wait for the boot shows like the others: a bar and the time left (kura asked for it; it does show when the end is).
-            if (!st.booted_at) return json({ parts, picked: s.picks, total, ms_left: bootAt(st) - now, ms_total: BAR_MS });
+            if (!st.booted_at) return json({ parts, picked: s.started, total, ms_left: bootAt(st) - now, ms_total: BAR_MS });
             const mc = await env.DB.prepare("SELECT name FROM machines WHERE place = ?1").bind(st.machine).first();
-            return json({ parts, picked: s.picks, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
+            return json({ parts, picked: s.started, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
           }
           if (s.open < 1) {
-            // The pick being installed is the last one; the bar runs from the slot before the next one to the next one.
+            // The bar running is a free install's, or the last pick's own.
             const last = state.picks[state.picks.length - 1];
-            return json({ parts, picked: s.picks, total, installing: PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: Date.parse(s.next_unlock_at) - now, ms_total: BAR_MS });
+            return json({ parts, picked: s.started, total, installing: s.free || PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS });
           }
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
-          return json({ parts, picked: s.picks, total, pair: s.picks + 1, choices: ch.map((c) => c.name) });
+          return json({ parts, picked: s.started, total, pair: s.picks + 1, choices: ch.options.map((c) => c.name) });
         }
         if (request.method !== "POST") return json({ error: "GET or POST only" }, 405);
         const body = await request.json().catch(() => ({}));
         if (s.done || s.open < 1) return json({ error: "No install is open" }, 409);
         if (body.pair !== s.picks + 1 || (body.choice !== 1 && body.choice !== 2)) return json({ error: "Pick one of the two" }, 400);
-        const picked = (await choices(env.TAG_SECRET, row.disk, body.pair))[body.choice - 1];
+        const ch = await choices(env.TAG_SECRET, row.disk, body.pair);
+        const picked = ch.options[body.choice - 1];
         const at = new Date(now).toISOString();
         const next = {
           ...state,
-          picks: [...(state.picks || []), { pair: body.pair, side: picked.side, at }],
-          history: [...(state.history || []), { event: "install", pair: body.pair, side: picked.side, at }],
+          picks: [...(state.picks || []), { pair: ch.pair, side: picked.side, at }],
+          history: [...(state.history || []), { event: "install", pair: ch.pair, side: picked.side, at }],
         };
         // Saves only if the number of picks is still what this request saw, so two phones can't take the same slot.
         const saved = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND COALESCE(json_array_length(state, '$.picks'), 0) = ?3")
