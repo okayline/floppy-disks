@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Short address
+- After a good tap the address bar shows the short /disk/NN instead of the long tap link. Removed: nothing.
+
 ## Floppy shows up on the live site
 - The floppy didn't draw on the live site (only its shadow showed); the page now carries what the site's bundler assumes. Removed: nothing.
 

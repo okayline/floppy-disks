@@ -175,7 +175,7 @@ export default {
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
-    // Three panels for the tapper: the public panel on top (with the floppy), the Disk panel (the game) and the Info panel (what the tap carries).
+    // The script first swaps the address bar to the short /disk/NN (the long tap link isn't needed after load; a reload then opens the public page). Three panels for the tapper: the public panel on top (with the floppy), the Disk panel (the game) and the Info panel (what the tap carries).
     const heading = awake.woke_at ? label(awake.name, disk, awake.wake_no) : name;
     return pages(
       heading,
@@ -191,7 +191,7 @@ export default {
           `Tap fingerprint: ${fingerprint}`,
       ],
       200,
-      `<script>${floppyScript(COLOURS[disk], !!awake.woke_at)}window.visit="${visit}";` +
+      `<script>if(window.history)history.replaceState(null,"",location.pathname);${floppyScript(COLOURS[disk], !!awake.woke_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),P=document.getElementById("pics"),H={"x-visit":window.visit};` +
         `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
