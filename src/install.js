@@ -21,11 +21,11 @@ for (let i = 0; i < STEPS.length; i++) {
 export const QUESTIONS = QSTEP.length;
 
 // Defrag (Nov 23, slowed Nov 26, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a forty-fifth of a time-unit per time-unit, up to a cap of a third of a bar
-// (20 minutes of 60), reached after fifteen bars (15 hours). A successful press takes a twentieth of the cap (what is built up, if less) off the running bar (1 minute at the real pace, 1 second at the 1-minute test pace; it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
+// (20 minutes of 60), reached after fifteen bars (15 hours). A successful press takes a hundredth of the cap (what is built up, if less) off the running bar (12 seconds at the real pace, 200 ms at the 1-minute test pace; it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
 export const FRAG_RATE = 0.1 / 4.5;
 export const FRAG_CAP_MS = BAR_MS / 3;
 // One successful Defrag takes this fraction of the cap off (not everything), the same every time.
-export const FRAG_STEP = 0.05;
+export const FRAG_STEP = 0.01;
 export const fragMs = (state, now) => Math.min(FRAG_CAP_MS, Math.max(0, (now - Date.parse(state.defrag_at || state.picks[0].at)) * FRAG_RATE));
 
 // Where the disk is at time `now`: how many questions are picked, how many of the 14 steps have started (the parts shown follow it), and either

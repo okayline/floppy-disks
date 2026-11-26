@@ -96,14 +96,14 @@ export default {
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
       if (sm[2] === "defrag") {
-        // Defrag: only while a free install runs. It takes a twentieth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
+        // Defrag: only while a free install runs. It takes a hundredth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
         if (request.method !== "POST") return json({ error: "POST only" }, 405);
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         const now = Date.now();
         const s = plan(state, now);
         if (!s.free) return json({ error: "Nothing to defragment right now" }, 409);
         const frag = fragMs(state, now), saved = Math.floor(Math.min(frag, FRAG_STEP * FRAG_CAP_MS, s.end - now));
-        if (saved < 1000) return json({ error: "Nothing to defragment yet" }, 409);
+        if (saved < 100) return json({ error: "Nothing to defragment yet" }, 409);
         const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
         // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
