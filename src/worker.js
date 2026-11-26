@@ -8,6 +8,7 @@ import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
 import { installed } from "./parts.js";
 import { slots, choices, bootAt, BAR_MS } from "./install.js";
+import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
 const hex = (b) => toHex(new Uint8Array(b));
@@ -49,7 +50,8 @@ const publicPanel = (st, disk, note, live, taps) => {
 const publicView = async (env, disk, note, status = 200) => {
   const row = await env.DB.prepare("SELECT state, last_tap FROM disks WHERE disk = ?1").bind(disk).first();
   const p = publicPanel(JSON.parse(row?.state || "{}"), disk, note, false, row?.last_tap);
-  return pages(p.heading, [p.html], status);
+  const st = JSON.parse(row?.state || "{}");
+  return pages(p.heading, [floppyCss + floppyBox + p.html], status, `<script>${floppyScript(COLOURS[disk], !!st.woke_at)}</script>`);
 };
 
 const json = (obj, status = 200) =>
@@ -178,7 +180,7 @@ export default {
     return pages(
       heading,
       [
-        `<b id="t">${heading}</b><p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
+        floppyCss + floppyBox + `<b id="t">${heading}</b><p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
         `<b>Secured:</b> signature verified.<br><br>` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
@@ -189,7 +191,7 @@ export default {
         publicPanel(awake, disk, "", true, tap.counter).html,
       ],
       200,
-      `<script>window.visit="${visit}";` +
+      `<script>${floppyScript(COLOURS[disk], !!awake.woke_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),P=document.getElementById("pics"),H={"x-visit":window.visit};` +
         `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
@@ -218,7 +220,7 @@ export default {
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
         `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `if(r.ok){document.getElementById("t").textContent=document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("t").textContent=document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";if(window.floppyLive)window.floppyLive();show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
