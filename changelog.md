@@ -2,6 +2,9 @@
 
 Newest first.
 
+## A disk's page opens once per tap
+- A disk's page now opens only from a fresh tap; a refresh, the back button or an old link says to tap the disk again. Removed: nothing.
+
 ## A disk's page checks the chip is that disk
 - A disk's page now only opens for its own chip. Removed: nothing.
 
