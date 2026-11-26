@@ -2,7 +2,7 @@
 // Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks are saved.
 import { PAIRS } from "./pairs.js";
 
-export const BAR_MS = 60 * 1000; // one bar. 1 MINUTE FOR TESTING: the real value is 6 hours (6 * 60 * 60 * 1000), to be set back
+export const BAR_MS = 60 * 1000; // one bar. 1 MINUTE FOR TESTING: the real value is 1 hour (60 * 60 * 1000), to be set back
 
 // The 14 steps in order: q = a question (pick 1 of 2), f = a free install. A question's bar starts at its pick; a free install's bar starts when the step before it ends.
 export const STEPS = "qfqfqfqqfqfqfq";
@@ -23,7 +23,7 @@ const FREE_AT = {}; // step number of a free install -> its place in FREE
 export const QUESTIONS = QSTEP.length;
 
 // Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a tenth of a time-unit per time-unit, up to a cap of a third of a bar
-// (2 hours of 6), reached after three and a third bars (20 hours). A successful press takes a tenth of the cap (what is built up, if less) off the running bar (it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
+// (20 minutes of 60), reached after three and a third bars (3 hours 20 minutes). A successful press takes a tenth of the cap (what is built up, if less) off the running bar (it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
 export const FRAG_RATE = 0.1;
 export const FRAG_CAP_MS = BAR_MS / 3;
 // One successful Defrag takes this fraction of the cap off (not everything).
