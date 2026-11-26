@@ -2,7 +2,7 @@
 // Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks are saved.
 import { PAIRS } from "./pairs.js";
 
-export const BAR_MS = 60 * 1000; // one bar. 1 MINUTE FOR TESTING: the real value is 1 hour (60 * 60 * 1000), to be set back
+export const BAR_MS = 60 * 60 * 1000; // one bar: 1 hour
 
 // The 14 steps in order: q = a question (pick 1 of 2), f = a free install. A question's bar starts at its pick; a free install's bar starts when the step before it ends.
 export const STEPS = "qfqfqfqqfqfqfq";
