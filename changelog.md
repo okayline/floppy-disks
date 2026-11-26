@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag layout
+- The Defrag bar now sits above its button, in lighter pastel colours. Footer version v0.39. Removed: the old darker bar colours and the button-above-bar order.
+
 ## Defrag is a timing game
 - Pressing Defrag now starts a bar with a ^ that sweeps across; stop it in the yellow zone and the defrag works, miss and nothing happens. Footer version v0.38. Removed: the Defrag that worked on a single press.
 

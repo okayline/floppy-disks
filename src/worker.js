@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.38";
+const FOOTER_VERSION = "v0.39";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -240,11 +240,11 @@ export default {
         `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"Defragmenting... "+hms(k.saved_ms)+" saved":k.error;show()};` +
         `db.onclick=()=>{if(SW){const p=(Date.now()-t0)/SWEEP*100;fin(p>=ZL&&p<=ZL+ZW);return}` +
         `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
-        `tr.style.cssText="position:relative;height:22px;background:#800080;border:2px inset #fff;margin:12px 0 26px";` +
-        `zn.style.cssText="position:absolute;top:0;bottom:0;background:#ff0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
+        `tr.style.cssText="position:relative;height:22px;background:#d9b8f0;border:2px inset #fff;margin:12px 0 26px";` +
+        `zn.style.cssText="position:absolute;top:0;bottom:0;background:#fff3a0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
         `cr.style.cssText="position:absolute;top:100%;margin:3px 0 0 -8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #000";` +
         `tr.append(zn,cr);mt.append(tr);db.textContent="Stop";t0=Date.now();` +
-        `SW=setInterval(()=>{const p=(Date.now()-t0)/SWEEP*100;if(p>=100){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,db,mt)}` +
+        `SW=setInterval(()=>{const p=(Date.now()-t0)/SWEEP*100;if(p>=100){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,mt,db)}` +
         `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
