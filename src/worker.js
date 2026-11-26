@@ -74,7 +74,6 @@ export default {
         const total = PAIRS.length;
         if (request.method === "GET") {
           const parts = s.picks >= 1 ? installed(s.picks) : undefined;
-          // No time is given once every pick is made: the player is never told when the end is.
           if (s.done) {
             let st = state;
             if (!st.booted_at && now >= bootAt(st)) {
@@ -88,7 +87,8 @@ export default {
               ).bind(JSON.stringify(booted), row.disk).run();
               st = JSON.parse((await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first()).state);
             }
-            if (!st.booted_at) return json({ parts, picked: s.picks, total });
+            // The wait for the boot shows like the others: a bar and the time left (kura asked for it; it does show when the end is).
+            if (!st.booted_at) return json({ parts, picked: s.picks, total, ms_left: bootAt(st) - now, ms_total: BAR_MS });
             const mc = await env.DB.prepare("SELECT name FROM machines WHERE place = ?1").bind(st.machine).first();
             return json({ parts, picked: s.picks, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
           }
@@ -197,14 +197,12 @@ export default {
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `I.append(tx,box,e);let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
-        // After the last pick there is no end time to show, so the bar only slides (3 blocks going round) and there is no estimate.
-        `const end=Date.now()+(j.ms_left||0),tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/(j.installing?2:3))%3+1);if(!j.installing&&k%200==0){show();return}` +
-        `if(!j.installing){bl.forEach((x,i)=>{x.style.background=(i-k%N+N)%N<3?"#000080":"transparent"});return}` +
+        `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
         `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"))};` +
-        `T=setInterval(tick,j.installing?500:300);tick()}};` +
+        `T=setInterval(tick,500);tick()}};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +

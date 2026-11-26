@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Countdown on the last wait
+- The last wait before the boot now has the same filling bar and time left as the installs. Removed: the sliding bar and the page's once-a-minute check.
+
 ## Public page and separate panels
 - Search engines are asked not to list the pages. /disk/NN now opens for anyone with a small public panel; a good tap adds a Disk panel and a separate Info panel. Removed: the "Not a real tap" and "Tap the disk again" pages (they show the public panel with a note).
 
