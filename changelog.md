@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Disk panel sizes to its screen
+- The Disk panel is no longer one fixed height. Each kind of screen (question, install, free install, boot) keeps the tallest height it has reached, so small text changes do not make it wobble, and a free install leaves room for the Defrag meter from the start. Footer version v0.48. Removed: the fixed 410px panel height.
+
 ## Disk centered over Wake up, bigger names, tighter panel
 - On a sleeping disk the picture is centered over the Wake up button, the name choices have bigger text, and the awake Disk panel is a little shorter so there is less empty space at the bottom. Footer version v0.47. Removed: the empty motherboard box beside a sleeping disk and the taller panel.
 

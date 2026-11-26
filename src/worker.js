@@ -14,10 +14,9 @@ const VISIT_MS = 10 * 60 * 1000;
 const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
-const DISK_FIXED = "height:410px;overflow:auto"; // the Disk panel's content height once awake (tallest state measured about 360 to 390)
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.47";
+const FOOTER_VERSION = "v0.48";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -207,8 +206,8 @@ export default {
       [
         // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
         publicPanel(awake, disk, "", true, tap.counter).html,
-        // The Disk panel (awake: a fixed height, DISK_FIXED, so it does not change size as the screens change; asleep: only as tall as its contents and the floppy centered over the Wake up button): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
-        `<div id="W" style="${awake.woke_at ? DISK_FIXED : ""}">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
+        // The Disk panel (sized to its contents; the page's fit() keeps each kind of screen at the tallest it has been, so the panel does not wobble with small text changes; the floppy is centered over the Wake up button while asleep): the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
+        `<div id="W">` + floppyCss + `<div id="pics" style="display:flex;gap:8px;margin:8px 0"><div id="fb" style="${awake.woke_at ? FB_STYLE : "width:50%;margin:0 auto;box-sizing:border-box;min-width:0"}">${floppyBox(true)}</div><div id="pm" style="${awake.woke_at ? PM_STYLE : "display:none"}"></div></div><div id="wake" style="text-align:center">${wake}</div><span id="install"></span></div>`,
         `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
@@ -218,7 +217,7 @@ export default {
       ],
       200,
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
-        `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
+        `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b"),W=document.getElementById("W"),HW={},fit=(k)=>{if(!W||!W.offsetHeight)return;W.style.minHeight="0";HW[k]=Math.max(HW[k]||0,W.offsetHeight);W.style.minHeight=HW[k]+"px"};` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
         `let T,SW=0,NOTE="",BS=0;const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async(live)=>{clearInterval(T);clearInterval(SW);SW=0;const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
@@ -231,7 +230,9 @@ export default {
         `else if(j.booted){const mkl=(t)=>{const q=document.createElement("div");q.textContent=t;I.append(q);return q};`+
         `if(!live){mkl("Booting disk...");mkl("Checking 14 installs... OK");mkl("Built "+j.machine);mkl(j.name+" is awake.")}`+
         `else{const my=++BS,sl=(ms)=>new Promise(r=>setTimeout(r,ms)),dots=async(q,t)=>{for(let i=0;i<6;i++){if(my!==BS)return false;q.textContent=t+".".repeat(i%3+1);await sl(400)}return my===BS};`+
-        `(async()=>{const a=mkl("");if(!await dots(a,"Booting disk"))return;await sl(600);if(my!==BS)return;const c=mkl("");if(!await dots(c,"Checking 14 installs"))return;await sl(600);if(my!==BS)return;c.textContent="Checking 14 installs... OK";await sl(600);if(my!==BS)return;mkl("Built "+j.machine);await sl(800);if(my!==BS)return;mkl(j.name+" is awake.")})()}`+
+        // All four lines are put in hidden first (so the panel is already its final height) and revealed one by one.
+        `const L=["Booting disk...","Checking 14 installs... OK","Built "+j.machine,j.name+" is awake."].map(t=>{const q=mkl(t);q.style.visibility="hidden";return q}),vis=(q)=>{q.style.visibility="visible"};`+
+        `(async()=>{const[a,c,d,z]=L;vis(a);if(!await dots(a,"Booting disk"))return;await sl(600);if(my!==BS)return;vis(c);if(!await dots(c,"Checking 14 installs"))return;await sl(600);if(my!==BS)return;c.textContent="Checking 14 installs... OK";await sl(600);if(my!==BS)return;vis(d);await sl(800);if(my!==BS)return;vis(z)})()}`+
         `document.getElementById("pt").textContent=j.name;document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
@@ -239,7 +240,7 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // Defrag is a timing game: the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";fl.textContent="Fragmentation: "+j.frag+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.round(Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)))+"%"};` +
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";fl.textContent="Fragmentation: "+j.frag+"%";const L0=Date.now();FU=()=>{fl.textContent="Fragmentation: "+Math.round(Math.min(100,j.frag+(Date.now()-L0)*(j.frag_rate||0)))+"%"};` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=12,ZL=45+Math.random()*35,SWEEP=1800;const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
@@ -256,14 +257,14 @@ export default {
         `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show(true);return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
-        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"))};` +
-        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}};` +
+        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));fit(j.frag!==undefined?"f":"i")};` +
+        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}fit(j.choices?"q":j.booted?"b":j.frag!==undefined?"f":"i")};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
         `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);c.style.cssText="font:inherit;font-size:1.2em;padding:10px 20px;margin:6px 0";` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `if(r.ok){document.getElementById("W").style.cssText="${DISK_FIXED}";document.getElementById("fb").style.cssText="${FB_STYLE}";document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("fb").style.cssText="${FB_STYLE}";document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
