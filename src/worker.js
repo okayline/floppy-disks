@@ -5,6 +5,8 @@
 // A tap that checks out under a disk's key can only have come from that disk's tag, so a link edited to another disk's number is refused.
 import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
+import { PAIRS } from "./pairs.js";
+import { slots, choices } from "./install.js";
 
 const VISIT_MS = 10 * 60 * 1000;
 const hex = (b) => toHex(new Uint8Array(b));
@@ -45,7 +47,7 @@ async function diskKey(secret, seal) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const sm = url.pathname.match(/^\/disk\/(\d{1,3})\/(state|names|wake)$/);
+    const sm = url.pathname.match(/^\/disk\/(\d{1,3})\/(state|names|wake|install)$/);
     if (sm) {
       // The visit token (header x-visit) must be live and belong to this disk. It proves a good tap opened this visit.
       const token = request.headers.get("x-visit") || "";
@@ -56,6 +58,37 @@ export default {
       const d = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first();
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
+      if (sm[2] === "install") {
+        if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
+        if (!env.TAG_SECRET) return json({ error: "Not set up" }, 500);
+        const now = Date.now();
+        const s = slots(state, now);
+        const total = PAIRS.length;
+        if (request.method === "GET") {
+          // No time is given once every pick is made: the player is never told when the end is.
+          if (s.done) return json({ picked: s.picks, total });
+          if (s.open < 1) return json({ picked: s.picks, total, next_unlock_at: s.next_unlock_at });
+          const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
+          return json({ picked: s.picks, total, pair: s.picks + 1, open: s.open, choices: ch.map((c) => c.name) });
+        }
+        if (request.method !== "POST") return json({ error: "GET or POST only" }, 405);
+        const body = await request.json().catch(() => ({}));
+        if (s.done || s.open < 1) return json({ error: "No install is open" }, 409);
+        if (body.pair !== s.picks + 1 || (body.choice !== 1 && body.choice !== 2)) return json({ error: "Pick one of the two" }, 400);
+        const picked = (await choices(env.TAG_SECRET, row.disk, body.pair))[body.choice - 1];
+        const at = new Date(now).toISOString();
+        const next = {
+          ...state,
+          first_pick_at: state.first_pick_at || at,
+          picks: [...(state.picks || []), { pair: body.pair, side: picked.side, at }],
+          history: [...(state.history || []), { event: "install", pair: body.pair, side: picked.side, at }],
+        };
+        // Saves only if the number of picks is still what this request saw, so two phones can't take the same slot.
+        const saved = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND COALESCE(json_array_length(state, '$.picks'), 0) = ?3")
+          .bind(JSON.stringify(next), row.disk, s.picks).run();
+        if (!saved.meta.changes) return json({ error: "Already picked" }, 409);
+        return json({ picked: s.picks + 1, total, name: picked.name });
+      }
       const words = nameWords(row.disk);
       if (!words) return json({ error: "Not set up" }, 500);
       if (sm[2] === "names") {
@@ -68,7 +101,7 @@ export default {
       const body = await request.json().catch(() => ({}));
       if (!words.includes(body.name)) return json({ error: "Pick one of the names" }, 400);
       const at = new Date().toISOString();
-      const woke = { name: body.name, woke_at: at, step: 1, history: [{ event: "wake", at }] };
+      const woke = { name: body.name, woke_at: at, picks: [], first_pick_at: null, history: [{ event: "wake", at }] };
       // Only a sleeping disk wakes, and only once: the statement fails if woke_at is already there.
       const saved = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND json_extract(state, '$.woke_at') IS NULL")
         .bind(JSON.stringify(woke), row.disk).run();
@@ -110,16 +143,24 @@ export default {
         `Chip ID: ${tap.uid.toUpperCase()}<br>` +
         `Signature: ${sig}<br>` +
         `Tap fingerprint: ${fingerprint}<br><br>` +
-        `<span id="wake">${wake}</span>`,
+        `<span id="wake">${wake}</span><span id="install"></span>`,
       200,
       `<script>window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
-        `const lab=(x)=>x+"-"+String(n).padStart(2,"0");` +
+        `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
+        `const show=async()=>{const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
+        `if(j.choices){I.append("Install which one? ("+j.pair+" of "+j.total+")");` +
+        `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
+        `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
+        `I.append(document.createElement("br"),c)})}` +
+        `else if(j.next_unlock_at){const m=Math.max(0,Math.ceil((Date.parse(j.next_unlock_at)-Date.now())/60000));I.textContent="Next install in "+Math.floor(m/60)+"h "+m%60+"m ("+j.picked+" of "+j.total+" installed)"}` +
+        `else I.textContent=j.picked+" of "+j.total+" installed"};` +
+        `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
         `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `if(r.ok){document.getElementById("t").textContent=lab(j.state.name);w.textContent=""}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("t").textContent=lab(j.state.name);w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };

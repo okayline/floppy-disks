@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Installs
+- A woken disk's page now offers a choice of two to install, one at a time, with the next choice opening after a wait. Removed: the unused step number in a disk's saved state.
+
 ## The page uses the picked name
 - A woken disk's page now shows its picked name as the heading. Removed: the separate name line.
 
