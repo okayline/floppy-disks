@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Disks 2 to 5 are listed
+- Disks 2 to 5 can now open their pages. Removed: nothing.
+
 ## Each disk has its own key
 - A disk's page now only opens from a tap signed with that disk's own key. Removed: the shared factory key and the chip list.
 
