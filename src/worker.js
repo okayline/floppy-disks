@@ -149,7 +149,7 @@ export default {
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
         `const show=async()=>{const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
-        `if(j.choices){I.append("Install which one? ("+j.pair+" of "+j.total+")");` +
+        `if(j.choices){I.append("Install which one?");` +
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(document.createElement("br"),c)})}` +
