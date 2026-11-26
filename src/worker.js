@@ -56,8 +56,8 @@ const publicPanel = (st, disk, note, live, taps) => {
   };
 };
 
-// The How to play panel, shown on every disk page (the public page and the tapped page). Plain text; "1 hour" is the real bar length (BAR_MS is 1 minute while testing).
-const HOW_TO_PLAY = `<b style="font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How to play</b><p style="margin:10px 0 0;font-size:14px;line-height:1.6">Tap your floppy disk with your phone to open its page. Press Wake up and choose a name for your disk. Then it installs itself, and each install takes 1 hour. Come back and tap again whenever you like. Some installs ask you to pick one of two options, and some start on their own. During the self-starting ones you can play Defrag: press the button when the moving marker is in the zone to make the wait shorter. After 14 installs the disk boots and shows what kind of PC it built.</p>`;
+// The How to play panel, shown on every disk page (the public page and the tapped page). Plain text, kura's wording.
+const HOW_TO_PLAY = `<b style="font:700 20px/1.2 system-ui,-apple-system,'Segoe UI',sans-serif">How to play</b><ol style="margin:10px 0 0;padding-left:1.4em;font-size:14px;line-height:1.7"><li>Get a disk!</li><li>Tap it with your phone</li><li>Wake it up</li><li>Choose what to install</li><li>Defrag!</li></ol><p style="margin:10px 0 0;font-size:14px;line-height:1.6">After installing all the components, find out which PC you built!</p>`;
 
 // The public page: reads only, writes nothing.
 const publicView = async (env, disk, note, status = 200) => {
