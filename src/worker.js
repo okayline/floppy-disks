@@ -34,21 +34,21 @@ const nameWords = (disk) => {
 // How a name is shown: the word, the disk number, and after the first boot the wake number (PINK-DISK-0307). The saved name is the word only.
 const label = (word, disk, wake) => `${word}-${String(disk).padStart(2, "0")}${wake ? String(wake).padStart(2, "0") : ""}`;
 
-// The public panel: what anyone can see, with no tap number, chip, signature, installs or machine.
+// The public panel: what anyone can see. The number of taps is the last tap number the server has seen for the disk; no chip, signature, installs or machine.
 // Status: asleep (not woken), building (woken, not booted), built (booted). The tapper's copy has ids so the page's script can update it.
-const publicPanel = (st, disk, note, live) => {
+const publicPanel = (st, disk, note, live, taps) => {
   const heading = st.woke_at ? label(st.name, disk, st.wake_no) : `FLOPPY-${String(disk).padStart(2, "0")}`;
   const state = st.booted_at ? "built" : st.woke_at ? "building" : "asleep";
   return {
     heading,
-    html: `<b id="${live ? "pt" : "t"}">${heading}</b><p>88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Status: <span id="${live ? "status" : "st"}">${state}</span></p>${note ? `<p>${note}</p>` : ""}`,
+    html: `<b id="${live ? "pt" : "t"}">${heading}</b><p>88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Taps: ${taps || 0}<br>Status: <span id="${live ? "status" : "st"}">${state}</span></p>${note ? `<p>${note}</p>` : ""}`,
   };
 };
 
 // The public page: reads only, writes nothing.
 const publicView = async (env, disk, note, status = 200) => {
-  const row = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
-  const p = publicPanel(JSON.parse(row?.state || "{}"), disk, note, false);
+  const row = await env.DB.prepare("SELECT state, last_tap FROM disks WHERE disk = ?1").bind(disk).first();
+  const p = publicPanel(JSON.parse(row?.state || "{}"), disk, note, false, row?.last_tap);
   return pages(p.heading, [p.html], status);
 };
 
@@ -186,7 +186,7 @@ export default {
           `Signature: ${sig}<br>` +
           `Tap fingerprint: ${fingerprint}`,
         // The public panel again at the bottom, as anyone sees it.
-        publicPanel(awake, disk, "", true).html,
+        publicPanel(awake, disk, "", true, tap.counter).html,
       ],
       200,
       `<script>window.visit="${visit}";` +

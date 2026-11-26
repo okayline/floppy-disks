@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Taps on the public panel
+- The public panel now shows the number of taps. Removed: nothing.
+
 ## Public panel at the bottom
 - A tapper's page now ends with the public panel too. Removed: nothing.
 
