@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Free installs name the part
+- A free install now says "Installing" and the part it adds, instead of its own separate name. Footer version v0.57. Removed: the six separate free-install names.
+
 ## Main page title
 - The main page's disk panel has a title line above the pink disk. Footer version v0.56. Removed: nothing.
 

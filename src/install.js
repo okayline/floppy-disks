@@ -1,25 +1,22 @@
 // The install flow. 14 steps, each one bar long. Most are a pick of 1 of 2 (a question); the rest are free installs that need no pick and start by themselves.
 // Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks are saved.
 import { PAIRS } from "./pairs.js";
+import { PARTS } from "./parts.js";
 
 export const BAR_MS = 60 * 1000; // one bar. 1 MINUTE FOR TESTING: the real value is 1 hour (60 * 60 * 1000), to be set back
 
 // The 14 steps in order: q = a question (pick 1 of 2), f = a free install. A question's bar starts at its pick; a free install's bar starts when the step before it ends.
 export const STEPS = "qfqfqfqqfqfqfq";
-// Names shown while a free install runs (placeholders), in the order the free steps come.
-export const FREE = ["Windows 95", "Video drivers", "Sound drivers", "Modem drivers", "CD-ROM drivers", "Notepad"];
 // Which questions (counting only questions, from 1) decide the machine. Each one is a bit, game = 1, the first the biggest: 4 of them give 16 endings (places 0 to 15).
 // The other questions only decide what the disk has installed.
 export const WEIGHTED = [1, 3, 5, 7];
 
 const QSTEP = []; // step number (from 1) of question n+1
 const FREE_AFTER = []; // free installs right after question n+1, before the next question
-const FREE_AT = {}; // step number of a free install -> its place in FREE
-{ let f = 0;
-  for (let i = 0; i < STEPS.length; i++) {
-    if (STEPS[i] === "q") { QSTEP.push(i + 1); FREE_AFTER.push(0); }
-    else { FREE_AFTER[FREE_AFTER.length - 1]++; FREE_AT[i + 1] = f++; }
-  } }
+for (let i = 0; i < STEPS.length; i++) {
+  if (STEPS[i] === "q") { QSTEP.push(i + 1); FREE_AFTER.push(0); }
+  else FREE_AFTER[FREE_AFTER.length - 1]++;
+}
 export const QUESTIONS = QSTEP.length;
 
 // Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a tenth of a time-unit per time-unit, up to a cap of a third of a bar
@@ -39,7 +36,7 @@ export function plan(state, now) {
   const at = lastPick(state), free = FREE_AFTER[picks - 1], stage = Math.floor((now - at) / BAR_MS);
   if (stage > free) return { picks, started: QSTEP[picks - 1] + free, open: 1 };
   const step = QSTEP[picks - 1] + stage;
-  return { picks, started: step, open: 0, free: stage ? FREE[FREE_AT[step]] : undefined, ms_left: at + (stage + 1) * BAR_MS - now, end: at + (free + 1) * BAR_MS };
+  return { picks, started: step, open: 0, free: stage ? PARTS[step - 1] : undefined, ms_left: at + (stage + 1) * BAR_MS - now, end: at + (free + 1) * BAR_MS };
 }
 // When the last pick's bar started, moved earlier by what Defrag has taken off since that pick.
 const lastPick = (state) => { const p = state.picks[state.picks.length - 1]; return Date.parse(p.at) - (p.saved || 0); };
