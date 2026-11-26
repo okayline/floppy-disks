@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.37";
+const FOOTER_VERSION = "v0.38";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -218,7 +218,7 @@ export default {
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
-        `let T,NOTE="";const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
+        `let T,SW=0,NOTE="";const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async()=>{clearInterval(T);clearInterval(SW);SW=0;const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
         `const pm=document.getElementById("pm");pm.textContent="";pm.style.cssText="${PM_STYLE}";` +
         `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
@@ -232,9 +232,19 @@ export default {
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
-        `if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button");fl.style.cssText="font-size:.8em";fl.textContent="Fragmentation: "+j.frag+"%";` +
+        // Defrag is a timing game: the ^ sweeps left to right under a bar; Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
+        `if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";fl.textContent="Fragmentation: "+j.frag+"%";` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
-        `db.onclick=async()=>{const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"Defragmenting... "+hms(k.saved_ms)+" saved":k.error;show()};I.append(fl,db)}` +
+        `let t0=0;const ZW=16,ZL=45+Math.random()*35,SWEEP=1800;` +
+        `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="Missed. Try again.";show();return}` +
+        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();NOTE=q.ok?"Defragmenting... "+hms(k.saved_ms)+" saved":k.error;show()};` +
+        `db.onclick=()=>{if(SW){const p=(Date.now()-t0)/SWEEP*100;fin(p>=ZL&&p<=ZL+ZW);return}` +
+        `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
+        `tr.style.cssText="position:relative;height:22px;background:#800080;border:2px inset #fff;margin:12px 0 26px";` +
+        `zn.style.cssText="position:absolute;top:0;bottom:0;background:#ff0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
+        `cr.style.cssText="position:absolute;top:100%;margin:3px 0 0 -8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #000";` +
+        `tr.append(zn,cr);mt.append(tr);db.textContent="Stop";t0=Date.now();` +
+        `SW=setInterval(()=>{const p=(Date.now()-t0)/SWEEP*100;if(p>=100){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,db,mt)}` +
         `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +

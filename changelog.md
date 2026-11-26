@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Defrag is a timing game
+- Pressing Defrag now starts a bar with a ^ that sweeps across; stop it in the yellow zone and the defrag works, miss and nothing happens. Footer version v0.38. Removed: the Defrag that worked on a single press.
+
 ## Defrag
 - A free install's screen now has a Defrag button and a fragmentation line; pressing it takes time off the wait. Footer version v0.37. Removed: nothing.
 
