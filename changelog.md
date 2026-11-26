@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Slower fragmentation, slower boot screen
+- Fragmentation now builds up more slowly. The boot screen reads Booting disk, Checking 14 installs, Built (the machine), then the awake line, one by one with animated dots, when you watch the disk finish. Footer version v0.45. Removed: the "Starting disk" and "Found" wording and the boot lines appearing all at once.
+
 ## Defrag takes a fifth
 - A successful Defrag now lowers fragmentation by a fifth instead of back to zero, and the saved-time line is gone. Footer version v0.44. Removed: the reset to zero and the "saved" line.
 

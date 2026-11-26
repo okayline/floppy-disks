@@ -15,7 +15,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.44";
+const FOOTER_VERSION = "v0.45";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -218,7 +218,7 @@ export default {
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
-        `let T,SW=0,NOTE="";const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async()=>{clearInterval(T);clearInterval(SW);SW=0;const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
+        `let T,SW=0,NOTE="",BS=0;const hms=(ms)=>{const s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+" hr "+m+" min":m?m+" min "+(s%60)+" s":s+" s"};const show=async(live)=>{clearInterval(T);clearInterval(SW);SW=0;const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
         `const pm=document.getElementById("pm");pm.textContent="";pm.style.cssText="${PM_STYLE}";` +
         `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
@@ -226,7 +226,11 @@ export default {
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(c)})}` +
-        `else if(j.booted){["Starting disk...","Checking 14 installs... OK","Found "+j.machine,j.name+" is awake."].forEach(x=>{const q=document.createElement("div");q.textContent=x;I.append(q)});document.getElementById("pt").textContent=j.name;document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
+        `else if(j.booted){const mkl=(t)=>{const q=document.createElement("div");q.textContent=t;I.append(q);return q};`+
+        `if(!live){mkl("Booting disk...");mkl("Checking 14 installs... OK");mkl("Built "+j.machine);mkl(j.name+" is awake.")}`+
+        `else{const my=++BS,sl=(ms)=>new Promise(r=>setTimeout(r,ms)),dots=async(q,t)=>{for(let i=0;i<6;i++){if(my!==BS)return false;q.textContent=t+".".repeat(i%3+1);await sl(400)}return my===BS};`+
+        `(async()=>{const a=mkl("");if(!await dots(a,"Booting disk"))return;await sl(600);if(my!==BS)return;const c=mkl("");if(!await dots(c,"Checking 14 installs"))return;await sl(600);if(my!==BS)return;c.textContent="Checking 14 installs... OK";await sl(600);if(my!==BS)return;mkl("Built "+j.machine);await sl(800);if(my!==BS)return;mkl(j.name+" is awake.")})()}`+
+        `document.getElementById("pt").textContent=j.name;document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
@@ -247,7 +251,7 @@ export default {
         `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};I.append(fl,mt,db)}` +
         `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
         `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
-        `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show();return}` +
+        `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show(true);return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.ceil(l/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
         `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"))};` +

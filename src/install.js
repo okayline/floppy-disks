@@ -22,9 +22,9 @@ const FREE_AT = {}; // step number of a free install -> its place in FREE
   } }
 export const QUESTIONS = QSTEP.length;
 
-// Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at half a time-unit per time-unit, up to a cap of a third of a bar
-// (2 hours of 6), reached after two thirds of a bar (4 hours). A successful press takes a fifth of the cap (what is built up, if less) off the running bar (it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
-export const FRAG_RATE = 0.5;
+// Defrag (decided Nov 23, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a quarter of a time-unit per time-unit, up to a cap of a third of a bar
+// (2 hours of 6), reached after one and a third bars (8 hours). A successful press takes a fifth of the cap (what is built up, if less) off the running bar (it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
+export const FRAG_RATE = 0.25;
 export const FRAG_CAP_MS = BAR_MS / 3;
 // One successful Defrag takes this fraction of the cap off (not everything).
 export const FRAG_STEP = 0.2;
