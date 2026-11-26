@@ -18,7 +18,8 @@ export const floppyCss = `<style>
   .fs.live { touch-action: none; cursor: grab; }
 </style>`;
 
-export const floppyBox = `<div class="fs" id="fs"><div class="disk" id="fd"></div></div>`;
+// The box: full size on the public page; small = the size of the disk picture in the Disk panel (the grid unit and height are set on the box itself).
+export const floppyBox = (small) => `<div class="fs" id="fs"${small ? ' style="--u:1.5px;height:170px;overflow:visible;margin:0"' : ""}><div class="disk" id="fd"></div></div>`;
 
 function client(colour, live) {
   const d = document.getElementById("fd");

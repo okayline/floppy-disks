@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Floppy in the disk picture box
+- On a tapper's page the floppy now sits in the disk picture's box in the Disk panel, with the parts list beside it in much smaller text; the install buttons' text is a little smaller. The public page keeps its floppy at the top. Footer version v0.34. Removed: the floppy at the top of the tapper page and the "[disk image]" placeholder.
+
 ## New tap closes old disk tabs
 - When a tap opens a disk page, older disk pages open in the same browser try to close themselves (browsers only allow it for some tabs). Footer version v0.33. Removed: nothing.
 

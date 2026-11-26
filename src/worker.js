@@ -14,7 +14,8 @@ const VISIT_MS = 10 * 60 * 1000;
 const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 // A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
-const FOOTER_VERSION = "v0.33";
+const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
+const FOOTER_VERSION = "v0.34";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -56,7 +57,7 @@ const publicView = async (env, disk, note, status = 200) => {
   const row = await env.DB.prepare("SELECT state, last_tap FROM disks WHERE disk = ?1").bind(disk).first();
   const p = publicPanel(JSON.parse(row?.state || "{}"), disk, note, false, row?.last_tap);
   const st = JSON.parse(row?.state || "{}");
-  return pages(p.heading, [floppyCss + floppyBox + p.html], status, `<script>${floppyScript(COLOURS[disk], !!st.booted_at)}</script>`);
+  return pages(p.heading, [floppyCss + floppyBox(false) + p.html], status, `<script>${floppyScript(COLOURS[disk], !!st.booted_at)}</script>`);
 };
 
 const json = (obj, status = 200) =>
@@ -186,8 +187,9 @@ export default {
       heading,
       [
         // The public panel first, with the floppy: the same as anyone sees, kept current by the page's script.
-        floppyCss + floppyBox + publicPanel(awake, disk, "", true, tap.counter).html,
-        `<p><span id="wake">${wake}</span><span id="pics" style="display:block"></span><span id="install"></span></p>`,
+        publicPanel(awake, disk, "", true, tap.counter).html,
+        // The Disk panel: the floppy sits in the disk picture's box, the motherboard's box (parts list, small text) beside it.
+        floppyCss + `<p><span id="wake">${wake}</span></p><div id="pics" style="display:flex;gap:8px;margin:8px 0"><div style="flex:1;box-sizing:border-box;min-width:0">${floppyBox(true)}</div><div id="pm" style="${PM_STYLE}"></div></div><span id="install"></span>`,
         `<b>Secured:</b> signature verified.<br><br><span style="font-size:.8em">` +
           `Seal: ${DISKS[disk]}<br>` +
           `Tap: ${tap.counter}<br>` +
@@ -198,14 +200,13 @@ export default {
       200,
       `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
-        `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),P=document.getElementById("pics"),H={"x-visit":window.visit};` +
+        `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),H={"x-visit":window.visit};` +
         `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +
         // The disk and the motherboard side by side (placeholders): the motherboard picture stays and the parts installed so far are listed on it.
-        `P.textContent="";const row=document.createElement("div"),pa=document.createElement("div"),pm=document.createElement("div");row.style.cssText="display:flex;gap:8px;margin:8px 0";` +
-        `pa.style.cssText=pm.style.cssText="flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center";pa.style.cssText+=";border:2px inset #fff;background:#fff";pa.textContent="[disk image]";` +
-        `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}row.append(pa,pm);P.append(row);` +
+        `const pm=document.getElementById("pm");pm.textContent="";pm.style.cssText="${PM_STYLE}";` +
+        `if(j.parts){pm.style.cssText+=";border:2px inset #fff;background:#fff";pm.append("[motherboard]");j.parts.forEach(x=>{const q=document.createElement("div");q.textContent="["+x+"]";pm.append(q)})}` +
         `if(j.choices){I.append("Install which one?");` +
-        `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.3em";` +
+        `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(c)})}` +
         `else if(j.booted){["Starting disk...","Checking 14 installs... OK","Found "+j.machine,j.name+" is awake."].forEach(x=>{const q=document.createElement("div");q.textContent=x;I.append(q)});document.getElementById("pt").textContent=j.name;document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
