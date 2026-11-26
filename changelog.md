@@ -2,6 +2,9 @@
 
 Newest first.
 
+## The page shows more about the tap
+- A disk's page now says it is secured and lists details of the tap that opened it. Removed: the one-line "Real tap" text.
+
 ## Disks 2 to 5 are listed
 - Disks 2 to 5 can now open their pages. Removed: nothing.
 

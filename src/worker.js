@@ -1,15 +1,15 @@
-// disk.88x31.app: what a tap on a floppy disk's tag opens. Smallest version: check the tap and show which disk and the tap count.
+// disk.88x31.app: what a tap on a floppy disk's tag opens. Checks the tap and shows what the tap itself carries: disk, seal, tap count, chip ID, signature and a fingerprint of this tap.
 // It keeps one number per disk (the last tap number seen) in KV: no cookie, no log, nothing about people.
 // Each disk's tag has its own key: the first 16 bytes of SHA-256("<TAG_SECRET>-k2-<seal number>"), set on the tag with NFC.cool Tools.
 // A tap that checks out under a disk's key can only have come from that disk's tag, so a link edited to another disk's number is refused.
-import { checkTap } from "./sun.js";
+import { checkTap, toHex } from "./sun.js";
 import { DISKS } from "./disks.js";
 
 const page = (title, body, status = 200) =>
   new Response(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>` +
       `<body style="font:18px monospace;background:#008080;color:#000;display:grid;place-items:center;min-height:100vh;margin:0">` +
-      `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;max-width:22em"><b>${title}</b><p>${body}</p></div>`,
+      `<div style="background:#c0c0c0;padding:24px;border:2px outset #fff;max-width:22em;word-break:break-all"><b>${title}</b><p>${body}</p></div>`,
     { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }
   );
 
@@ -35,6 +35,18 @@ export default {
     const last = Number((await env.TAPS.get(`disk:${disk}`)) ?? -1);
     if (tap.counter <= last) return page("Tap the disk again", `${name} opens from a fresh tap. Hold your phone to the disk.`, 403);
     await env.TAPS.put(`disk:${disk}`, String(tap.counter));
-    return page(name, `Real tap. This disk's chip has been tapped ${tap.counter} time${tap.counter === 1 ? "" : "s"}.`);
+    // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
+    const sig = (url.searchParams.get("cmac") || "").toUpperCase();
+    const seen = new TextEncoder().encode(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase());
+    const fingerprint = toHex(new Uint8Array(await crypto.subtle.digest("SHA-256", seen)).slice(0, 8)).toUpperCase();
+    return page(
+      name,
+      `<b>Secured:</b> signature verified.<br><br>` +
+        `Seal: ${DISKS[disk]}<br>` +
+        `Tap: ${tap.counter}<br>` +
+        `Chip ID: ${tap.uid.toUpperCase()}<br>` +
+        `Signature: ${sig}<br>` +
+        `Tap fingerprint: ${fingerprint}`
+    );
   },
 };
