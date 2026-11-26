@@ -12,7 +12,9 @@ import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
 const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
-const FOOTER_VERSION = "v0.32";
+// A new tap tells the other disk pages open in this browser (a message between tabs, nothing stored) and they try to close themselves; browsers only allow it for some tabs.
+const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
+const FOOTER_VERSION = "v0.33";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -194,7 +196,7 @@ export default {
           `Tap fingerprint: ${fingerprint}</span>`,
       ],
       200,
-      `<script>if(window.history)history.replaceState(null,"",location.pathname);${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
+      `<script>if(window.history)history.replaceState(null,"",location.pathname);${CLOSE_OLD}${floppyScript(COLOURS[disk], !!awake.booted_at)}window.visit="${visit}";` +
         `const n=${disk},w=document.getElementById("wake"),b=document.getElementById("b");` +
         `const lab=(x)=>x+"-"+String(n).padStart(2,"0"),I=document.getElementById("install"),P=document.getElementById("pics"),H={"x-visit":window.visit};` +
         `let T;const show=async()=>{clearInterval(T);const r=await fetch("/disk/"+n+"/install",{headers:H}),j=await r.json();I.textContent="";if(!r.ok){I.textContent=j.error;return}` +

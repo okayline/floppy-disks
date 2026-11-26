@@ -2,6 +2,9 @@
 
 Newest first.
 
+## New tap closes old disk tabs
+- When a tap opens a disk page, older disk pages open in the same browser try to close themselves (browsers only allow it for some tabs). Footer version v0.33. Removed: nothing.
+
 ## Footer and smaller Info text
 - Every page now ends with the shared footer. The Info panel's text is smaller (the Secured line is unchanged). Removed: nothing.
 
