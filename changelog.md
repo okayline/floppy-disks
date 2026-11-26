@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Public panel at the bottom
+- A tapper's page now ends with the public panel too. Removed: nothing.
+
 ## Countdown on the last wait
 - The last wait before the boot now has the same filling bar and time left as the installs. Removed: the sliding bar and the page's once-a-minute check.
 

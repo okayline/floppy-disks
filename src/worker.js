@@ -34,14 +34,22 @@ const nameWords = (disk) => {
 // How a name is shown: the word, the disk number, and after the first boot the wake number (PINK-DISK-0307). The saved name is the word only.
 const label = (word, disk, wake) => `${word}-${String(disk).padStart(2, "0")}${wake ? String(wake).padStart(2, "0") : ""}`;
 
-// What anyone can see without a tap: no tap number, chip, signature, installs or machine. Reads only, writes nothing.
-// Status: asleep (not woken), building (woken, not booted), built (booted).
-const publicView = async (env, disk, note, status = 200) => {
-  const row = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
-  const st = JSON.parse(row?.state || "{}");
+// The public panel: what anyone can see, with no tap number, chip, signature, installs or machine.
+// Status: asleep (not woken), building (woken, not booted), built (booted). The tapper's copy has ids so the page's script can update it.
+const publicPanel = (st, disk, note, live) => {
   const heading = st.woke_at ? label(st.name, disk, st.wake_no) : `FLOPPY-${String(disk).padStart(2, "0")}`;
   const state = st.booted_at ? "built" : st.woke_at ? "building" : "asleep";
-  return pages(heading, [`<b id="t">${heading}</b><p>88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Status: ${state}</p><p>${note}</p>`], status);
+  return {
+    heading,
+    html: `<b id="${live ? "pt" : "t"}">${heading}</b><p>88x31 floppy disk<br>Colour: ${COLOURS[disk]}<br>Status: <span id="${live ? "status" : "st"}">${state}</span></p>${note ? `<p>${note}</p>` : ""}`,
+  };
+};
+
+// The public page: reads only, writes nothing.
+const publicView = async (env, disk, note, status = 200) => {
+  const row = await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(disk).first();
+  const p = publicPanel(JSON.parse(row?.state || "{}"), disk, note, false);
+  return pages(p.heading, [p.html], status);
 };
 
 const json = (obj, status = 200) =>
@@ -165,7 +173,7 @@ export default {
     // Everything shown comes from the tap or the disk list. Nothing derived from the key is shown.
     const sig = (url.searchParams.get("cmac") || "").toUpperCase();
     const fingerprint = (await sha256(`${url.searchParams.get("picc_data")}${url.searchParams.get("cmac")}`.toUpperCase())).slice(0, 16).toUpperCase();
-    // Two panels for the tapper: the Disk panel (the game) and the Info panel (what the tap carries).
+    // Three panels for the tapper: the Disk panel (the game), the Info panel (what the tap carries) and the public panel at the bottom.
     const heading = awake.woke_at ? label(awake.name, disk, awake.wake_no) : name;
     return pages(
       heading,
@@ -177,6 +185,8 @@ export default {
           `Chip ID: ${tap.uid.toUpperCase()}<br>` +
           `Signature: ${sig}<br>` +
           `Tap fingerprint: ${fingerprint}`,
+        // The public panel again at the bottom, as anyone sees it.
+        publicPanel(awake, disk, "", true).html,
       ],
       200,
       `<script>window.visit="${visit}";` +
@@ -191,7 +201,7 @@ export default {
         `j.choices.forEach((x,i)=>{const c=document.createElement("button");c.textContent=(i+1)+". "+x;c.style.cssText="display:block;width:100%;box-sizing:border-box;padding:20px 8px;margin:12px 0;font:inherit;font-size:1.3em";` +
         `c.onclick=async()=>{const q=await fetch("/disk/"+n+"/install",{method:"POST",headers:H,body:JSON.stringify({pair:j.pair,choice:i+1})}),k=await q.json();if(q.ok)show();else I.textContent=k.error};` +
         `I.append(c)})}` +
-        `else if(j.booted){["Starting disk...","Checking 14 installs... OK","Found "+j.machine,j.name+" is awake."].forEach(x=>{const q=document.createElement("div");q.textContent=x;I.append(q)});document.getElementById("t").textContent=j.name}` +
+        `else if(j.booted){["Starting disk...","Checking 14 installs... OK","Found "+j.machine,j.name+" is awake."].forEach(x=>{const q=document.createElement("div");q.textContent=x;I.append(q)});document.getElementById("t").textContent=document.getElementById("pt").textContent=j.name;document.getElementById("status").textContent="built"}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
         `tx.append((j.installing?"Installing "+j.installing:"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
@@ -208,7 +218,7 @@ export default {
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +
         `j.names.forEach(x=>{const c=document.createElement("button");c.textContent=lab(x);` +
         `c.onclick=async()=>{const r=await fetch("/disk/"+n+"/wake",{method:"POST",headers:{"x-visit":window.visit},body:JSON.stringify({name:x})}),j=await r.json();` +
-        `if(r.ok){document.getElementById("t").textContent=lab(j.state.name);w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
+        `if(r.ok){document.getElementById("t").textContent=document.getElementById("pt").textContent=lab(j.state.name);document.getElementById("status").textContent="building";w.textContent="";show()}else w.textContent=j.error};w.append(document.createElement("br"),c)})}</script>`
     );
   },
 };
