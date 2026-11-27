@@ -1,5 +1,5 @@
 // The install flow. 8 installs, each one bar long. Each starts at a pick of 1 of 2 (a question); most go on to a free hardware install in the second half of the same bar (14 steps in all).
-// Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks (and the time Defrag took off each) are saved.
+// Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks (and what Defrag took off each) are saved.
 import { PAIRS } from "./pairs.js";
 
 export const BAR_MS = 60 * 1000; // one install's whole bar. 1 MINUTE FOR TESTING: the real value is 1 hour (60 * 60 * 1000), to be set back
@@ -20,24 +20,25 @@ for (let i = 0; i < STEPS.length; i++) {
 }
 export const QUESTIONS = QSTEP.length;
 
-// Fragmentation builds only during an install, from a quarter of its bar to the end (it holds still before that and between installs) and carries over to the next. Each install adds 7/60 of the cap
-// (a third of a bar: 20 minutes of 60), so eight installs with no Defrag end at 93 percent. A successful press takes a hundredth of the cap (what is built up, if less) off the running bar
+// Fragmentation builds only during an install, from a tenth of its bar to the end (it holds still before that and between installs) and carries over to the next. Each install adds a quarter of the cap
+// (the cap is a third of a bar: 20 minutes of 60), so with no Defrag it is full after four installs. A successful press takes a hundredth of the cap (what is built up, if less) off the running bar
 // (12 seconds at the real pace, 200 ms at the 1-minute test pace; it moves the rest of the schedule earlier).
-export const FRAG_FROM = 0.25;
-export const FRAG_RATE = 7 / 135; // per millisecond of bar progress past FRAG_FROM: 7/60 of the cap over three quarters of a bar
+export const FRAG_FROM = 0.1;
+export const FRAG_RATE = 5 / 54; // per millisecond of bar progress past FRAG_FROM: a quarter of the cap over nine tenths of a bar
 export const FRAG_CAP_MS = BAR_MS / 3;
 // One successful Defrag takes this fraction of the cap off (not everything), the same every time.
 export const FRAG_STEP = 0.01;
-// What is built up: what every install so far has added (by its progress, Defrag time counted) less all that Defrag has taken off.
-export const fragMs = (state, now) => {
-  let grown = 0, cleared = 0;
+// What is built up before the cap: what every install so far has added (by its progress, Defrag time counted) less all that Defrag has taken off (`saved`) and what was already over the cap
+// at a press (`spill`, dropped then, so a press on a full disk shows a drop and it builds again from there).
+export const fragRaw = (state, now) => {
+  let raw = 0;
   for (const p of state.picks || []) {
     const progress = Math.min(BAR_MS, now - Date.parse(p.at) + (p.saved || 0));
-    grown += Math.max(0, progress - FRAG_FROM * BAR_MS) * FRAG_RATE;
-    cleared += p.saved || 0;
+    raw += Math.max(0, progress - FRAG_FROM * BAR_MS) * FRAG_RATE - (p.saved || 0) - (p.spill || 0);
   }
-  return Math.min(FRAG_CAP_MS, Math.max(0, grown - cleared));
+  return raw;
 };
+export const fragMs = (state, now) => Math.min(FRAG_CAP_MS, Math.max(0, fragRaw(state, now)));
 
 // Where the disk is at time `now`: how many questions are picked, how many of the 14 steps have started (the parts shown follow it), and whether all questions are picked (done) or the next can be answered (open).
 // While a bar runs (the last question's too) it also gives: the free install's name if one is on (no `free`: the pick's own part of the bar), the time left, the end, the time until the next part

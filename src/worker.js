@@ -7,7 +7,7 @@ import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
 import { installed, PARTS } from "./parts.js";
-import { plan, choices, bootAt, machinePlace, fragMs, FRAG_CAP_MS, FRAG_RATE, FRAG_STEP, STEPS, BAR_MS } from "./install.js";
+import { plan, choices, bootAt, machinePlace, fragMs, fragRaw, FRAG_CAP_MS, FRAG_RATE, FRAG_STEP, STEPS, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.62";
+const FOOTER_VERSION = "v0.63";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -104,7 +104,8 @@ export default {
         if (!s.end || state.booted_at) return json({ error: "Nothing to defragment right now" }, 409);
         const frag = fragMs(state, now), saved = Math.floor(Math.min(frag, FRAG_STEP * FRAG_CAP_MS, s.end - now));
         if (saved < 1) return json({ error: "Nothing to defragment yet" }, 409);
-        const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
+        const over = Math.max(0, fragRaw(state, now) - FRAG_CAP_MS); // growth past the cap is dropped at a press
+        const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved, ...(over && { spill: (p.spill || 0) + over }) } : p));
         // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
           .bind(JSON.stringify({ ...state, picks }), row.disk, d.state).run();
@@ -256,22 +257,23 @@ export default {
         `(async()=>{const[a,c,d,z]=L;vis(a);if(!await dots(a,"Booting disk"))return;await sl(600);if(my!==BS)return;vis(c);if(!await dots(c,"Checking 14 installs"))return;await sl(600);if(my!==BS)return;c.textContent="Checking 14 installs... OK";await sl(600);if(my!==BS)return;vis(d);await sl(800);if(my!==BS)return;vis(z)})()}`+
         `document.getElementById("pt").textContent="["+j.name+"]";document.getElementById("status").textContent="built";if(window.floppyLive)window.floppyLive()}` +
         `else{const N=20,tx=document.createElement("div"),d=document.createElement("span"),box=document.createElement("div"),e=document.createElement("div"),bl=[];` +
-        `tx.style.fontWeight="700";tx.append((j.installing||"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
+        `tx.style.cssText="font-weight:700;line-height:25px;height:50px";tx.append((j.installing||"Copying files"),d);d.style.cssText="display:inline-block;min-width:3ch";` +
         `box.style.cssText="display:flex;gap:2px;padding:2px;margin:8px 0;border:2px inset #fff;background:#c0c0c0";` +
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
-        // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation in the reserved space): the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now(),G=j.grow_in||0;let SH=j.frag,NX=L0+G+600+Math.random()*3150;const dim=()=>{if(SW)return;db.disabled=SH.toFixed(1)==="0.0";db.style.opacity=db.disabled?".45":"1";db.style.cursor=db.disabled?"default":"pointer"};FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+Math.max(0,t-L0-G)*(j.frag_rate||0));NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";dim()};` +
+        // The install line's box is always two lines high, so the bar under it stays put; a line that would need three (a long name on a narrow phone) gets smaller letters until it fits.
+        `d.textContent="...";for(let f=parseFloat(getComputedStyle(tx).fontSize);tx.scrollHeight>tx.clientHeight+1&&f>12;)tx.style.fontSize=(--f)+"px";` +
+        // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation under the bar). The bar's outline is always there; its colors, the zone and the ^ show only from a press of Defrag until the screen redraws after Stop: the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div"),tr=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root";tr.style.cssText="position:relative;height:22px;border:2px inset #fff;margin:12px 0 26px";mt.append(tr);if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="position:absolute;top:100%;left:0;right:0;text-align:center;font-weight:bold;line-height:22px;white-space:nowrap";tr.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now(),G=j.grow_in||0;let SH=j.frag,NX=L0+G+600+Math.random()*3150;const dim=()=>{if(SW)return;db.disabled=SH.toFixed(1)==="0.0";db.style.opacity=db.disabled?".45":"1";db.style.cursor=db.disabled?"default":"pointer"};FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+Math.max(0,t-L0-G)*(j.frag_rate||0));NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";dim()};` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=Math.max(4,12-1.5*HITS),ZL=45+Math.random()*35,SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
         `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok)HITS++;NOTE=q.ok?"-"+k.saved_pct.toFixed(1)+"% fragmentation":k.error;show()};` +
         `const go=()=>{if(db.disabled)return;if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
-        `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
-        `tr.style.cssText="position:relative;height:22px;background:#d9b8f0;border:2px inset #fff;margin:12px 0 26px";` +
+        `const zn=document.createElement("div"),cr=document.createElement("div");tr.textContent="";tr.style.background="#d9b8f0";` +
         `zn.style.cssText="position:absolute;top:0;bottom:0;background:#fff3a0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
         `cr.style.cssText="position:absolute;top:100%;margin:3px 0 0 -8px;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:12px solid #000";` +
-        `tr.append(zn,cr);mt.append(tr);db.textContent="Stop";t0=Date.now();` +
+        `tr.append(zn,cr);db.textContent="Stop";t0=Date.now();` +
         `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};` +
         // Defrag and Stop react when the finger goes down, not when it lifts (a touch's click comes after the lift, so the arrow had moved on). A click with detail 0 is the keyboard (Enter or Space); touch and mouse clicks come after the press and are ignored.
         `db.onpointerdown=(e)=>{if(e.button===0)go()};db.onclick=(e)=>{if(!e||e.detail===0)go()};I.append(fl,mt,db);dim()}` +

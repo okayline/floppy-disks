@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Faster fragmentation, a steadier install screen
+- Fragmentation starts sooner and builds faster, and a Defrag on a full disk now shows a drop. The Defrag bar's outline is always on screen, with its colors only while it runs. The install line keeps room for two lines, so the progress bar stays in place. Footer version v0.63. Removed: the bar vanishing between presses, and the progress bar shifting with the line's length.
+
 ## One bar for each install
 - Each install is now one progress bar, fragmentation and the Defrag button show from the start, and the fragmentation pace is rebalanced. Footer version v0.62. Removed: the second bar for hardware installs, and the "Copying files" line.
 
