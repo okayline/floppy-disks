@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.63";
+const FOOTER_VERSION = "v0.64";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -101,9 +101,9 @@ export default {
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         const now = Date.now();
         const s = plan(state, now);
-        if (!s.end || state.booted_at) return json({ error: "Nothing to defragment right now" }, 409);
+        if (!s.end || state.booted_at) return json({}, 409); // no message: the page just redraws
         const frag = fragMs(state, now), saved = Math.floor(Math.min(frag, FRAG_STEP * FRAG_CAP_MS, s.end - now));
-        if (saved < 1) return json({ error: "Nothing to defragment yet" }, 409);
+        if (saved < 1) return json({}, 409);
         const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
         // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
@@ -262,12 +262,12 @@ export default {
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // The install line's box is always two lines high, so the bar under it stays put; a line that would need three (a long name on a narrow phone) gets smaller letters until it fits.
         `d.textContent="...";for(let f=parseFloat(getComputedStyle(tx).fontSize);tx.scrollHeight>tx.clientHeight+1&&f>12;)tx.style.fontSize=(--f)+"px";` +
-        // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation under the bar). The bar's outline is always there; its colors, the zone (a new place every press) and the ^ show only while it runs. A miss changes nothing on screen but the bar. The shown fragmentation never goes up because of a press or a redraw: only its own timer raises it, and not within 600 ms of a press: the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div"),tr=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root";tr.style.cssText="position:relative;height:22px;border:2px inset #fff;margin:12px 0 26px";mt.append(tr);if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="position:absolute;top:100%;left:0;right:0;text-align:center;font-weight:bold;line-height:22px;white-space:nowrap";tr.append(nn)}const L0=Date.now(),G=j.grow_in||0;let SH=LAST===null?j.frag:Math.min(LAST,j.frag);LAST=SH;fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";let NX=L0+G+600+Math.random()*3150;const dim=()=>{if(SW)return;db.disabled=SH.toFixed(1)==="0.0";db.style.opacity=db.disabled?".45":"1";db.style.cursor=db.disabled?"default":"pointer"};FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+Math.max(0,t-L0-G)*(j.frag_rate||0));LAST=SH;NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";dim()};` +
+        // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation and the seconds saved under the bar). The bar's outline is always there; its colors, the zone (a new place every press) and the ^ show only while it runs. A miss changes nothing on screen but the bar. The shown fragmentation never goes up because of a press or a redraw: only its own timer raises it, and not within 600 ms of a press: the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div"),tr=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root";tr.style.cssText="position:relative;height:22px;border:2px inset #fff;margin:12px 0 26px";mt.append(tr);if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="position:absolute;top:100%;left:0;right:0;text-align:center;font-weight:bold;font-size:.9em;line-height:22px;white-space:nowrap";tr.append(nn)}const L0=Date.now(),G=j.grow_in||0;let SH=LAST===null?j.frag:Math.min(LAST,j.frag);LAST=SH;fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";let NX=L0+G+600+Math.random()*3150;const dim=()=>{if(SW)return;db.disabled=SH.toFixed(1)==="0.0";db.style.opacity=db.disabled?".45":"1";db.style.cursor=db.disabled?"default":"pointer"};FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+Math.max(0,t-L0-G)*(j.frag_rate||0));LAST=SH;NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";dim()};` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0,ZL=0;const ZW=Math.max(4,12-1.5*HITS),SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){tr.textContent="";tr.style.background="";db.textContent="Defrag";dim();return}` +
-        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok){HITS++;LAST=Math.max(0,SH-k.saved_pct)}NOTE=q.ok?"-"+k.saved_pct.toFixed(1)+"% fragmentation":k.error;show()};` +
+        `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok){HITS++;LAST=Math.max(0,SH-k.saved_pct)}NOTE=q.ok?"-"+k.saved_pct.toFixed(1)+"% fragmentation, -"+Math.max(0.1,Math.round(k.saved_ms/100)/10)+"s":k.error||"";show()};` +
         `const go=()=>{if(db.disabled)return;NX=Math.max(NX,Date.now()+600);if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
         `ZL=45+Math.random()*35;const zn=document.createElement("div"),cr=document.createElement("div");tr.textContent="";tr.style.background="#d9b8f0";` +
         `zn.style.cssText="position:absolute;top:0;bottom:0;background:#fff3a0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
