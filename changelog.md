@@ -2,8 +2,8 @@
 
 Newest first.
 
-## Defrag shows the time saved
-- A successful Defrag now shows the time it saved next to the percentage. Footer version v0.64. Removed: the "Nothing to defragment" messages.
+## Defrag shows the time saved, clearer zone
+- A successful Defrag now shows the time it saved next to the percentage. The Defrag bar stays grey, and its yellow zone has a thin black outline. Footer version v0.64. Removed: the "Nothing to defragment" messages and the purple bar.
 
 ## A steadier install screen
 - The Defrag bar's outline is always on screen, with its colors only while it runs. The install line keeps room for two lines, so the progress bar stays in place. A press no longer makes the fragmentation number go up. Footer version v0.63. Removed: the Defrag bar vanishing between presses, the progress bar shifting with the line's length, and the screen redraw after a miss.
