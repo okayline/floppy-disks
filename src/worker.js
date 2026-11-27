@@ -16,7 +16,7 @@ const FOOTER_URL = "https://dungeon-items.ddddungeon.workers.dev/footer.js";
 const CLOSE_OLD = `if(window.BroadcastChannel){const c=new BroadcastChannel("disk-tabs");c.onmessage=()=>window.close();c.postMessage("new")}`;
 const FB_STYLE = "flex:1;box-sizing:border-box;min-width:0;background:#d4d4d4;border-radius:12px;padding:12px";
 const PM_STYLE = "flex:1;box-sizing:border-box;padding:8px;min-height:6em;text-align:center;font-size:.6em;min-width:0";
-const FOOTER_VERSION = "v0.61";
+const FOOTER_VERSION = "v0.62";
 const hex = (b) => toHex(new Uint8Array(b));
 const sha256 = async (text) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 
@@ -96,18 +96,18 @@ export default {
       const state = JSON.parse(d?.state || "{}");
       if (sm[2] === "state") return json({ disk: row.disk, state });
       if (sm[2] === "defrag") {
-        // Defrag: only while a free install runs. It takes a hundredth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
+        // Defrag: only while an install bar runs. It takes a hundredth of the cap (or what is built up, if less; at most what is left of the schedule) off the bar; fragmentation then keeps building from what is left.
         if (request.method !== "POST") return json({ error: "POST only" }, 405);
         if (!state.woke_at) return json({ error: "Wake the disk first" }, 409);
         const now = Date.now();
         const s = plan(state, now);
-        if (!s.free) return json({ error: "Nothing to defragment right now" }, 409);
+        if (!s.end || state.booted_at) return json({ error: "Nothing to defragment right now" }, 409);
         const frag = fragMs(state, now), saved = Math.floor(Math.min(frag, FRAG_STEP * FRAG_CAP_MS, s.end - now));
-        if (saved < 100) return json({ error: "Nothing to defragment yet" }, 409);
+        if (saved < 1) return json({ error: "Nothing to defragment yet" }, 409);
         const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
         // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
-          .bind(JSON.stringify({ ...state, picks, defrag_at: new Date(Math.round(now - (frag - saved) / FRAG_RATE)).toISOString() }), row.disk, d.state).run();
+          .bind(JSON.stringify({ ...state, picks }), row.disk, d.state).run();
         if (!done.meta.changes) return json({ error: "Try again" }, 409);
         return json({ saved_ms: saved, saved_pct: Math.max(0.1, Math.round((saved / FRAG_CAP_MS) * 1000) / 10) });
       }
@@ -117,6 +117,12 @@ export default {
         const now = Date.now();
         const s = plan(state, now);
         const total = STEPS.length;
+        // What the page needs to draw a running bar: the line, the times, and fragmentation (percent of the cap, its growth per millisecond and when that starts).
+        const running = () => {
+          const last = state.picks[state.picks.length - 1];
+          return { installing: s.free || "Installing " + PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, ms_next: s.ms_next,
+            frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 1000) / 10, frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, grow_in: s.grow_in };
+        };
         if (request.method === "GET") {
           let parts = s.started >= 1 ? installed(s.started) : undefined;
           if (s.done) {
@@ -133,7 +139,7 @@ export default {
               st = JSON.parse((await env.DB.prepare("SELECT state FROM disks WHERE disk = ?1").bind(row.disk).first()).state);
             }
             // The wait for the boot shows like the others: a bar and the time left (kura asked for it; it does show when the end is).
-            if (!st.booted_at) return json({ parts, picked: s.started, total, ms_left: bootAt(st) - now, ms_total: BAR_MS });
+            if (!st.booted_at) return json({ parts, picked: s.started, total, ...running() });
             const mc = await env.DB.prepare("SELECT name FROM machines WHERE place = ?1").bind(st.machine).first();
             // The machine's own part names show only now, at the end; until the boot the list has the plain names. A missing row (or no table) keeps the plain name.
             try {
@@ -143,11 +149,7 @@ export default {
             } catch {}
             return json({ parts, picked: s.started, total, booted: true, machine: mc?.name || "unknown machine", name: label(st.name, row.disk, st.wake_no) });
           }
-          if (s.open < 1) {
-            // The bar running is a free install's, or the last pick's own; both show the fragmentation line, only a free install offers Defrag.
-            const last = state.picks[state.picks.length - 1];
-            return json({ parts, picked: s.started, total, installing: s.free || "Installing " + PAIRS[last.pair - 1][last.side === "game" ? 1 : 0], ms_left: s.ms_left, ms_total: BAR_MS, frag: Math.round((fragMs(state, now) / FRAG_CAP_MS) * 1000) / 10, frag_rate: (FRAG_RATE * 100) / FRAG_CAP_MS, can_defrag: !!s.free });
-          }
+          if (s.open < 1) return json({ parts, picked: s.started, total, ...running() });
           const ch = await choices(env.TAG_SECRET, row.disk, s.picks + 1);
           return json({ parts, picked: s.started, total, pair: s.picks + 1, choices: ch.options.map((c) => c.name) });
         }
@@ -259,12 +261,12 @@ export default {
         `for(let i=0;i<N;i++){const x=document.createElement("div");x.style.cssText="flex:1;height:18px";bl.push(x);box.append(x)}` +
         `e.style.cssText="font-size:.8em";I.append(tx,box,e);` +
         // Defrag is a timing game (every hit makes it harder in this page load: the zone 1.5 points narrower down to 4, the sweep 15 percent faster down to 700 ms, both back at the next tap; a hit shows -N% fragmentation in the reserved space): the ^ sweeps right, bounces back left, then right again and off the end (3 legs); Stop inside the yellow zone is a hit and only then is the defrag asked for (a miss changes nothing).
-        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now();let SH=j.frag,NX=L0+600+Math.random()*3150;FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+(t-L0)*(j.frag_rate||0));NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%"};if(!j.can_defrag)I.append(fl);else{` +
+        `let FU=null;if(j.frag!==undefined){const fl=document.createElement("div"),db=document.createElement("button"),mt=document.createElement("div");fl.style.cssText="font-size:.8em";mt.style.cssText="display:flow-root;min-height:64px";if(NOTE){const nn=document.createElement("div");nn.textContent=NOTE;NOTE="";nn.style.cssText="text-align:center;font-weight:bold;padding:8px 0";mt.append(nn)}fl.textContent="Fragmentation: "+j.frag.toFixed(1)+"%";const L0=Date.now(),G=j.grow_in||0;let SH=j.frag,NX=L0+G+600+Math.random()*3150;const dim=()=>{if(SW)return;db.disabled=SH.toFixed(1)==="0.0";db.style.opacity=db.disabled?".45":"1";db.style.cursor=db.disabled?"default":"pointer"};FU=()=>{const t=Date.now();if(t>=NX){SH=Math.min(100,j.frag+Math.max(0,t-L0-G)*(j.frag_rate||0));NX=t+600+Math.random()*3150}fl.textContent="Fragmentation: "+SH.toFixed(1)+"%";dim()};` +
         `db.textContent="Defrag";db.style.cssText="display:block;width:100%;box-sizing:border-box;padding:14px 8px;margin:12px 0;font:inherit;font-size:1.1em";` +
         `let t0=0;const ZW=Math.max(4,12-1.5*HITS),ZL=45+Math.random()*35,SWEEP=Math.max(700,1800*Math.pow(.85,HITS));const pos=()=>{const u=(Date.now()-t0)/SWEEP;if(u>=3)return -1;const f=u%1;return(Math.floor(u)%2?1-f:f)*100};` +
         `const fin=async(hit)=>{clearInterval(SW);SW=0;if(!hit){NOTE="";show();return}` +
         `const q=await fetch("/disk/"+n+"/defrag",{method:"POST",headers:H}),k=await q.json();if(q.ok)HITS++;NOTE=q.ok?"-"+k.saved_pct.toFixed(1)+"% fragmentation":k.error;show()};` +
-        `const go=()=>{if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
+        `const go=()=>{if(db.disabled)return;if(SW){const p=pos();fin(p>=ZL&&p<=ZL+ZW);return}` +
         `mt.textContent="";const tr=document.createElement("div"),zn=document.createElement("div"),cr=document.createElement("div");` +
         `tr.style.cssText="position:relative;height:22px;background:#d9b8f0;border:2px inset #fff;margin:12px 0 26px";` +
         `zn.style.cssText="position:absolute;top:0;bottom:0;background:#fff3a0";zn.style.left=ZL+"%";zn.style.width=ZW+"%";` +
@@ -272,14 +274,14 @@ export default {
         `tr.append(zn,cr);mt.append(tr);db.textContent="Stop";t0=Date.now();` +
         `SW=setInterval(()=>{const p=pos();if(p<0){fin(false);return}cr.style.left=p+"%"},16)};` +
         // Defrag and Stop react when the finger goes down, not when it lifts (a touch's click comes after the lift, so the arrow had moved on). A click with detail 0 is the keyboard (Enter or Space); touch and mouse clicks come after the press and are ignored.
-        `db.onpointerdown=(e)=>{if(e.button===0)go()};db.onclick=(e)=>{if(!e||e.detail===0)go()};I.append(fl,mt,db)}}` +
+        `db.onpointerdown=(e)=>{if(e.button===0)go()};db.onclick=(e)=>{if(!e||e.detail===0)go()};I.append(fl,mt,db);dim()}` +
         `let k=0;const u=(v,w)=>v+" "+w+(v==1?"":"s");` +
-        `const end=Date.now()+j.ms_left,tick=()=>{k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
+        `const L1=Date.now(),end=L1+j.ms_left,tick=()=>{if(j.ms_next!==undefined&&!SW&&Date.now()-L1>=j.ms_next){show();return}k++;d.textContent=".".repeat(Math.floor(k/2)%3+1);` +
         `if(FU)FU();const l=end-Date.now();if(l<=0){clearInterval(T);show(true);return}` +
         `bl.forEach((x,i)=>{x.style.background=i<Math.floor((1-l/j.ms_total)*N)?"#000080":"transparent"});` +
         `const s=Math.max(0,Math.ceil(l/1000)-1),h=Math.floor(s/3600),m=Math.floor(s%3600/60);` +
-        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));fit(j.can_defrag?"f":"i")};` +
-        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}fit(j.choices?"q":j.booted?"b":j.can_defrag?"f":"i")};` +
+        `e.textContent="Estimated time remaining: "+(h?u(h,"hour")+" "+u(m,"minute"):m?u(m,"minute")+" "+u(s%60,"second"):u(s,"second"));fit("f")};` +
+        `T=setInterval(tick,500);tick()}if(NOTE){const m=document.createElement("div");m.textContent=NOTE;NOTE="";I.append(m)}fit(j.choices?"q":j.booted?"b":"f")};` +
         `if(!b)show();` +
         `if(b)b.onclick=async()=>{const r=await fetch("/disk/"+n+"/names",{headers:{"x-visit":window.visit}}),j=await r.json();` +
         `if(!r.ok){w.textContent=j.error;return}w.textContent="Pick a name:";` +

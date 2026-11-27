@@ -1,10 +1,10 @@
-// The install flow. 14 steps, each one bar long. Most are a pick of 1 of 2 (a question); the rest are free installs that need no pick and start by themselves.
-// Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks are saved.
+// The install flow. 8 installs, each one bar long. Each starts at a pick of 1 of 2 (a question); most go on to a free hardware install in the second half of the same bar (14 steps in all).
+// Everything is worked out from the saved state and the clock when someone taps (no scheduled job). Only the question picks (and the time Defrag took off each) are saved.
 import { PAIRS } from "./pairs.js";
 
-export const BAR_MS = 60 * 1000; // one bar. 1 MINUTE FOR TESTING: the real value is 1 hour (60 * 60 * 1000), to be set back
+export const BAR_MS = 60 * 1000; // one install's whole bar. 1 MINUTE FOR TESTING: the real value is 1 hour (60 * 60 * 1000), to be set back
 
-// The 14 steps in order: q = a question (pick 1 of 2), f = a free install. A question's bar starts at its pick; a free install's bar starts when the step before it ends.
+// The 14 steps in order: q = a question (pick 1 of 2), f = a free install. A question and the free installs after it share one bar, split in equal parts; the bar starts at the pick.
 export const STEPS = "qfqfqfqqfqfqfq";
 // What the screen says while a free install runs, by step number: the part that step adds (see parts.js), most of them "Installing <part>".
 export const FREE_LINE = { 2: "Installing Power Supply", 4: "Installing Keyboard Cable", 6: "Installing CD-ROM", 9: "Installing CPU", 11: "Installing and testing out Graphics Card", 13: "Backwards-engineering custom drivers for Sound Card" };
@@ -20,24 +20,36 @@ for (let i = 0; i < STEPS.length; i++) {
 }
 export const QUESTIONS = QSTEP.length;
 
-// Defrag (Nov 23, slowed Nov 26, scaled to the bar so the real numbers come back with BAR_MS): fragmentation builds from the last Defrag (or the first pick) at a forty-fifth of a time-unit per time-unit, up to a cap of a third of a bar
-// (20 minutes of 60), reached after fifteen bars (15 hours). A successful press takes a hundredth of the cap (what is built up, if less) off the running bar (12 seconds at the real pace, 200 ms at the 1-minute test pace; it moves the rest of the schedule earlier) and fragmentation keeps building from what is left.
-export const FRAG_RATE = 0.1 / 4.5;
+// Fragmentation builds only during an install, from a quarter of its bar to the end (it holds still before that and between installs) and carries over to the next. Each install adds 7/60 of the cap
+// (a third of a bar: 20 minutes of 60), so eight installs with no Defrag end at 93 percent. A successful press takes a hundredth of the cap (what is built up, if less) off the running bar
+// (12 seconds at the real pace, 200 ms at the 1-minute test pace; it moves the rest of the schedule earlier).
+export const FRAG_FROM = 0.25;
+export const FRAG_RATE = 7 / 135; // per millisecond of bar progress past FRAG_FROM: 7/60 of the cap over three quarters of a bar
 export const FRAG_CAP_MS = BAR_MS / 3;
 // One successful Defrag takes this fraction of the cap off (not everything), the same every time.
 export const FRAG_STEP = 0.01;
-export const fragMs = (state, now) => Math.min(FRAG_CAP_MS, Math.max(0, (now - Date.parse(state.defrag_at || state.picks[0].at)) * FRAG_RATE));
+// What is built up: what every install so far has added (by its progress, Defrag time counted) less all that Defrag has taken off.
+export const fragMs = (state, now) => {
+  let grown = 0, cleared = 0;
+  for (const p of state.picks || []) {
+    const progress = Math.min(BAR_MS, now - Date.parse(p.at) + (p.saved || 0));
+    grown += Math.max(0, progress - FRAG_FROM * BAR_MS) * FRAG_RATE;
+    cleared += p.saved || 0;
+  }
+  return Math.min(FRAG_CAP_MS, Math.max(0, grown - cleared));
+};
 
-// Where the disk is at time `now`: how many questions are picked, how many of the 14 steps have started (the parts shown follow it), and either
-// done (all questions picked), open (the next question can be answered), or the bar that is running (a free install's name, or the pick's own: no `free`) with its time left.
+// Where the disk is at time `now`: how many questions are picked, how many of the 14 steps have started (the parts shown follow it), and whether all questions are picked (done) or the next can be answered (open).
+// While a bar runs (the last question's too) it also gives: the free install's name if one is on (no `free`: the pick's own part of the bar), the time left, the end, the time until the next part
+// of the bar starts (if there is one) and until fragmentation starts to build.
 export function plan(state, now) {
   const picks = (state.picks || []).length;
   if (!picks) return { picks, started: 0, open: 1 };
-  if (picks >= QUESTIONS) return { picks, started: STEPS.length, done: true };
-  const at = lastPick(state), free = FREE_AFTER[picks - 1], stage = Math.floor((now - at) / BAR_MS);
-  if (stage > free) return { picks, started: QSTEP[picks - 1] + free, open: 1 };
-  const step = QSTEP[picks - 1] + stage;
-  return { picks, started: step, open: 0, free: stage ? FREE_LINE[step] : undefined, ms_left: at + (stage + 1) * BAR_MS - now, end: at + (free + 1) * BAR_MS };
+  const at = lastPick(state), free = FREE_AFTER[picks - 1], end = at + BAR_MS, done = picks >= QUESTIONS;
+  if (now >= end) return { picks, started: QSTEP[picks - 1] + free, open: done ? 0 : 1, done };
+  const part = BAR_MS / (free + 1), stage = Math.max(0, Math.floor((now - at) / part)), step = QSTEP[picks - 1] + stage;
+  return { picks, started: step, open: 0, done, free: stage ? FREE_LINE[step] : undefined, ms_left: end - now, end,
+    ms_next: stage < free ? at + (stage + 1) * part - now : undefined, grow_in: Math.max(0, at + FRAG_FROM * BAR_MS - now) };
 }
 // When the last pick's bar started, moved earlier by what Defrag has taken off since that pick.
 const lastPick = (state) => { const p = state.picks[state.picks.length - 1]; return Date.parse(p.at) - (p.saved || 0); };

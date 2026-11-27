@@ -2,6 +2,9 @@
 
 Newest first.
 
+## One bar for each install
+- Each install is now one progress bar, fragmentation and the Defrag button show from the start, and the fragmentation pace is rebalanced. Footer version v0.62. Removed: the second bar for hardware installs, and the "Copying files" line.
+
 ## Parts named for the machine
 - From the motherboard on, the parts list names the machine's own motherboard, CPU and graphics card. Footer version v0.61. Removed: the plain part names for those three.
 
