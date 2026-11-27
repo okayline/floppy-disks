@@ -7,7 +7,7 @@ import { checkTap, toHex } from "./sun.js";
 import { DISKS, COLOURS } from "./disks.js";
 import { PAIRS } from "./pairs.js";
 import { installed, PARTS } from "./parts.js";
-import { plan, choices, bootAt, machinePlace, fragMs, fragRaw, FRAG_CAP_MS, FRAG_RATE, FRAG_STEP, STEPS, BAR_MS } from "./install.js";
+import { plan, choices, bootAt, machinePlace, fragMs, FRAG_CAP_MS, FRAG_RATE, FRAG_STEP, STEPS, BAR_MS } from "./install.js";
 import { floppyCss, floppyBox, floppyScript } from "./floppy.js";
 
 const VISIT_MS = 10 * 60 * 1000;
@@ -104,8 +104,7 @@ export default {
         if (!s.end || state.booted_at) return json({ error: "Nothing to defragment right now" }, 409);
         const frag = fragMs(state, now), saved = Math.floor(Math.min(frag, FRAG_STEP * FRAG_CAP_MS, s.end - now));
         if (saved < 1) return json({ error: "Nothing to defragment yet" }, 409);
-        const over = Math.max(0, fragRaw(state, now) - FRAG_CAP_MS); // growth past the cap is dropped at a press
-        const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved, ...(over && { spill: (p.spill || 0) + over }) } : p));
+        const picks = state.picks.map((p, i) => (i === state.picks.length - 1 ? { ...p, saved: (p.saved || 0) + saved } : p));
         // Saves only if the disk's state is still the one this request read, so two quick presses can't both save.
         const done = await env.DB.prepare("UPDATE disks SET state = ?1 WHERE disk = ?2 AND state = ?3")
           .bind(JSON.stringify({ ...state, picks }), row.disk, d.state).run();
