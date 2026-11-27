@@ -2,6 +2,9 @@
 
 Newest first.
 
+## Clearer wording about the chip ID
+- The Privacy and How it works panels word more exactly what isn't saved about the chip ID. Footer version v0.65. Removed: the older, broader "we don't save it" and "aren't saved" wording.
+
 ## Defrag shows the time saved, clearer zone
 - A successful Defrag now shows the time it saved next to the percentage. The Defrag bar stays grey, and its yellow zone has a thin black outline. Footer version v0.64. Removed: the "Nothing to defragment" messages and the purple bar.
 
