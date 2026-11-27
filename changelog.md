@@ -2,6 +2,9 @@
 
 Newest first.
 
+## New disk numbers
+- Four disks have new, randomly picked numbers, so their tags need the new links. Removed: their old numbers (2 to 5), whose links no longer open a disk.
+
 ## Clearer wording about the chip ID
 - The Privacy and How it works panels word more exactly what isn't saved about the chip ID. Footer version v0.65. Removed: the older, broader "we don't save it" and "aren't saved" wording.
 
